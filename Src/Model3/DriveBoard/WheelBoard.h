@@ -23,7 +23,11 @@
 /*
  * WheelBoard.h
  *
+ * This code is enhanced with Claude by ANthropic. 
  * Header for the CWheelBoard (force feedback emulation for wheel) class.
+ *
+ * HLE mode: Z80 ROM is not required. All force feedback commands from the PPC
+ * are decoded directly and forwarded to SDL Haptic.
  */
 
 #ifndef INCLUDED_WHEELBOARD_H
@@ -54,13 +58,12 @@ public:
    *
    * Parameters:
    *    seg1Digit1  Reference of variable to store digit 1 of the first 7-
-   *          segment display to.
+   *                segment display to.
    *    seg1Digit2  First display, second digit.
    *    seg2Digit1  Second display, first digit.
    *    seg2Digit2  Second display, second digit.
    */
   void Get7SegDisplays(UINT8 &seg1Digit, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2) const;
-
 
   /*
    * SaveState(SaveState):
@@ -68,7 +71,7 @@ public:
    * Saves the drive board state.
    *
    * Parameters:
-   *    SaveState Block file to save state information to.
+   *    SaveState  Block file to save state information to.
    */
   void SaveState(CBlockFile *SaveState);
 
@@ -78,14 +81,14 @@ public:
    * Restores the drive board state.
    *
    * Parameters:
-   *    SaveState Block file to load save state information from.
+   *    SaveState  Block file to load save state information from.
    */
   void LoadState(CBlockFile *SaveState);
 
   /*
    * Reset(void):
    *
-   * Resets the drive board.
+   * Resets the drive board. Forces HLE mode (m_simulated = true).
    */
   void Reset(void);
 
@@ -117,12 +120,25 @@ public:
   void RunFrame(void);
 
   /*
+   * InitSDLHaptic():
+   * CloseSDLHaptic():
+   *
+   * Open/close the SDL haptic device. InitSDLHaptic() must be called once
+   * after SDL_Init(SDL_INIT_HAPTIC | SDL_INIT_JOYSTICK).
+   *
+   * Returns (Init):
+   *    True on success, false on failure.
+   */
+  bool InitSDLHaptic();
+  void CloseSDLHaptic();
+
+  /*
    * CWheelBoard(config):
    * ~CWheelBoard():
    *
    * Constructor and destructor. Memory is freed by destructor.
    *
-   * Paramters:
+   * Parameters:
    *    config  Run-time configuration. The reference should be held because
    *            this changes at run-time.
    */
@@ -130,30 +146,26 @@ public:
   ~CWheelBoard(void);
 
   /*
-   * Read8(addr):
    * IORead8(portNum):
    *
-   * Methods for reading from Z80's memory and IO space. Required by CBus.
+   * Methods for reading from Z80's IO space. Required by CBus.
    *
    * Parameters:
-   *    addr    Address in memory (0-0xFFFF).
-   *    portNum   Port address (0-255).
+   *    portNum  Port address (0-255).
    *
    * Returns:
-   *    A byte of data from the address or port.
+   *    A byte of data from the port.
    */
   UINT8 IORead8(UINT32 portNum);
 
   /*
-   * Write8(addr, data):
-   * IORead8(portNum, data):
+   * IOWrite8(portNum, data):
    *
-   * Methods for writing to Z80's memory and IO space. Required by CBus.
+   * Methods for writing to Z80's IO space. Required by CBus.
    *
    * Parameters:
-   *    addr    Address in memory (0-0xFFFF).
-   *    portNum   Port address (0-255).
-   *    data    Byte to write.
+   *    portNum  Port address (0-255).
+   *    data     Byte to write.
    */
   void IOWrite8(UINT32 portNum, UINT8 data);
 
@@ -161,56 +173,98 @@ protected:
   void Disable(void);
 
 private:
+  // -------------------------------------------------------------------------
+  // Legacy state loader
+  // -------------------------------------------------------------------------
   void LoadLegacyState(CBlockFile *SaveState);
 
+  // -------------------------------------------------------------------------
+  // 7-segment display state
+  // -------------------------------------------------------------------------
   UINT8 m_seg1Digit1;   // Current value of left digit on 7-segment display 1
   UINT8 m_seg1Digit2;   // Current value of right digit on 7-segment display 1
   UINT8 m_seg2Digit1;   // Current value of left digit on 7-segment display 2
-  UINT8 m_seg2Digit2;     // Current value of right digit on 7-segment display 2
+  UINT8 m_seg2Digit2;   // Current value of right digit on 7-segment display 2
 
-  UINT16 m_adcPortRead;   // ADC port currently reading from
-  UINT8 m_adcPortBit;     // Bit number currently reading on ADC port
+  // -------------------------------------------------------------------------
+  // ADC / encoder port state
+  // -------------------------------------------------------------------------
+  UINT16 m_adcPortRead;  // ADC port currently reading from
+  UINT8  m_adcPortBit;   // Bit number currently reading on ADC port
 
-  UINT8 m_port42Out;      // Last value sent to Z80 I/O port 42 (encoder motor data)
-  UINT8 m_port46Out;      // Last value sent to Z80 I/O port 46 (encoder motor control)
+  UINT8 m_port42Out;     // Last value sent to Z80 I/O port 42 (encoder motor data)
+  UINT8 m_port46Out;     // Last value sent to Z80 I/O port 46 (encoder motor control)
+  UINT8 m_prev42Out;     // Previous value sent to Z80 I/O port 42
+  UINT8 m_prev46Out;     // Previous value sent to Z80 I/O port 46
 
-  UINT8 m_prev42Out;      // Previous value sent to Z80 I/O port 42
-  UINT8 m_prev46Out;      // Previous value sent to Z80 I/O port 46
+  UINT8 m_uncenterVal1;  // First part of pending uncenter command
+  UINT8 m_uncenterVal2;  // Second part of pending uncenter command
 
-  UINT8 m_uncenterVal1;   // First part of pending uncenter command
-  UINT8 m_uncenterVal2;   // Second part of pending uncenter command
+  // -------------------------------------------------------------------------
+  // Force feedback output state
+  // -------------------------------------------------------------------------
+  INT8  m_lastConstForce;  // Last constant force command sent
+  UINT8 m_lastSelfCenter;  // Last self center command sent
+  UINT8 m_lastFriction;    // Last friction command sent
+  UINT8 m_lastVibrate;     // Last vibrate command sent
 
-  // Feedback state
-  INT8 m_lastConstForce;  // Last constant force command sent
-  UINT8 m_lastSelfCenter; // Last self center command sent
-  UINT8 m_lastFriction;   // Last friction command sent
-  UINT8 m_lastVibrate;    // Last vibrate command sent
+  // -------------------------------------------------------------------------
+  // HLE game-type detection
+  // -------------------------------------------------------------------------
+  enum HLEGameType
+  {
+    HLE_GAME_UNKNOWN    = 0,
+    HLE_GAME_SCUD_RACE  = 1,  // command set A
+    HLE_GAME_DAYTONA2   = 2,  // command set A (compatible with Scud Race)
+    HLE_GAME_SEGA_RALLY2 = 3  // command set B (encoder via port 0x42/0x46)
+  };
 
-  UINT8 SimulateRead(void);
+  HLEGameType m_hleGameType;    // Detected game type
+  UINT8       m_hleCabinetType; // 0xB0 = standard, 0xB1 = deluxe/twin
+  UINT8       m_steeringParam;  // Last 0x7x steering sensitivity byte
 
-  void SimulateWrite(UINT8 data);
+  // -------------------------------------------------------------------------
+  // HLE core — replace Z80 emulation entirely
+  // -------------------------------------------------------------------------
+  UINT8 HLERead(void);
+  void  HLEWrite(UINT8 data);
+  void  HLEFrame(void);
 
-  void SimulateFrame(void);
+  // Command set A: Scud Race / Daytona 2
+  void HLEDecodeCommandSetA(UINT8 cmd);
 
+  // Command set B: Sega Rally 2 (encoder protocol via ports 0x42/0x46)
   void ProcessEncoderCmd(void);
 
+  // -------------------------------------------------------------------------
+  // Preset sequence helpers
+  // -------------------------------------------------------------------------
+  void PlaySequenceJolt(INT8 strength);
+  void PlaySequenceRumble(UINT8 strength);
+  void PlaySequencePowerSlide(UINT8 strength);
+
+  // -------------------------------------------------------------------------
+  // Force feedback output (SDL Haptic)
+  // -------------------------------------------------------------------------
   void SendStopAll(void);
-
   void SendConstantForce(INT8 val);
-
   void SendSelfCenter(UINT8 val);
-
   void SendFriction(UINT8 val);
-
   void SendVibrate(UINT8 val);
 
+  // -------------------------------------------------------------------------
+  // ADC channel helpers
+  // -------------------------------------------------------------------------
   uint8_t ReadADCChannel1() const;
-
   uint8_t ReadADCChannel2() const;
-
   uint8_t ReadADCChannel3() const;
-
   uint8_t ReadADCChannel4() const;
+
+  // -------------------------------------------------------------------------
+  // Removed in HLE version (kept as comment for reference)
+  // -------------------------------------------------------------------------
+  // SimulateRead / SimulateWrite / SimulateFrame are replaced by
+  // HLERead / HLEWrite / HLEFrame respectively.
 };
 
 #endif  // INCLUDED_WHEELBOARD_H
