@@ -22,6 +22,7 @@
 /*
  * Main.cpp
  *
+ * This code is enhanced with Claude by ANthropic. 
  * Main program driver for the SDL port.
  *
  * Bugs and Issues to Address
@@ -92,6 +93,7 @@
 #include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
+#include "Model3/DriveBoard/WheelBoard.h"
 #include "OSD/Audio.h"
 #include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
@@ -104,8 +106,6 @@
 #include "OSD/DefaultConfigFile.h"
 #include "Gui.h"
 
-#include <SDL.h>
-SDL_Haptic* g_haptic = nullptr;
 
 /******************************************************************************
  Global Run-time Config
@@ -1016,6 +1016,23 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Reset emulator
   Model3->Reset();
+
+  // Initialize SDL Haptic for HLE force feedback (no Z80 ROM required).
+  // Must be called after Reset() so the drive board instance is active.
+  {
+    CModel3 *m3 = dynamic_cast<CModel3 *>(Model3);
+    if (m3 && m3->GetDriveBoard())
+    {
+      CWheelBoard *wheelBoard = dynamic_cast<CWheelBoard *>(m3->GetDriveBoard());
+      if (wheelBoard)
+      {
+        if (wheelBoard->InitSDLHaptic())
+          InfoLog("SDL Haptic initialized for force feedback.");
+        else
+          ErrorLog("SDL Haptic initialization failed. Force feedback disabled.");
+      }
+    }
+  }
 
   // Load initial save state if requested
   if (!initialState.empty())
@@ -2316,8 +2333,7 @@ int main(int argc, char **argv)
   LogConfig(s_runtime_config);
 
   // Initialize SDL (individual subsystems get initialized later)
-  // Adjustments for hle_vibration
-  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) != 0)
+  if (SDL_Init(0) != 0)
   {
     ErrorLog("Unable to initialize SDL: %s\n", SDL_GetError());
     return 1;
@@ -2468,5 +2484,4 @@ Exit:
 
   return exitCode;
 }
-
 
