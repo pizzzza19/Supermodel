@@ -1541,6 +1541,7 @@ Util::Config::Node DefaultConfig()
   config.Set("LegacySoundDSP", false, "Sound"); // New config option for games that do not play correctly with MAME's SCSP sound core.
   // CDriveBoard
   config.Set("ForceFeedback", false, "ForceFeedback");
+  config.Set("DriveBoardHLE", false, "DriveBoardHLE");  // Use HLE force feedback (no Z80 ROM required)
   
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
@@ -2015,6 +2016,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-emulate-netboard",    { "SimulateNet",   false } },
 #endif
     { "-no-force-feedback",   { "ForceFeedback",    false } },
+    { "-drive-board-hle",     { "DriveBoardHLE",    true  } },  // Force HLE drive board emulation
     { "-force-feedback",      { "ForceFeedback",    true } },
     { "-dump-memory",         { "DumpMemory",       true } },
     { "-dump-textures",       { "DumpTextures",     true } },
