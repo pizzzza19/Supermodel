@@ -33,12 +33,12 @@
  *   - Daytona 2          (command set A: compatible with Scud Race)
  *   - Sega Rally 2       (command set B: encoder-based via ports 0x42/0x46)
  *
- * HLE strategy:
- *   m_simulated is forced TRUE always — CDriveBoard Z80 core is never started.
- *   Write() dispatches to HLEWrite() which auto-detects the active game by
- *   inspecting the cabinet type byte sent during initialisation (0xB0/0xB1).
- *   SimulateRead() returns a fast fake init sequence so the game boots without
- *   the usual drive board delay.
+ * Strategy:
+ *   - ROM present:  Z80 emulation runs as normal. SDL Haptic / GameController
+ *                   rumble is used for output (replaces ForceFeedbackCmd layer).
+ *   - ROM absent:   HLE mode — m_simulated=true, Z80 never started.
+ *                   PPC commands decoded directly in HLEWrite() and forwarded
+ *                   to SDL. Fast fake init sequence eliminates boot delay.
  */
 
 #include "WheelBoard.h"
@@ -255,8 +255,24 @@ void CWheelBoard::Reset(void)
   m_lastConstForce = 0; m_lastSelfCenter = 0;
   m_lastFriction   = 0; m_lastVibrate    = 0;
 
-  // HLE: always bypass Z80
-  m_simulated = true;
+  // Use HLE only when no drive board ROM is present.
+  // If ROM is available, fall back to Z80 emulation (original behaviour).
+  // CDriveBoard::Reset() calls Disable() when ROM is missing, so we check
+  // IsDisabled() to detect the ROM-less case and re-enable with HLE.
+  if (IsDisabled())
+  {
+    // No ROM found — enable HLE mode
+    m_simulated = true;
+    // Re-enable the board (CDriveBoard::Reset set it disabled due to missing ROM)
+    // Only re-enable if ForceFeedback config is on
+    if (m_config["ForceFeedback"].ValueAsDefault<bool>(false))
+      CDriveBoard::Enable();
+  }
+  else
+  {
+    // ROM present — use Z80 emulation, HLE SDL output still active
+    m_simulated = false;
+  }
 
   // Detect game type from cabinet byte received during init (reset to unknown)
   m_hleGameType = HLE_GAME_UNKNOWN;
@@ -275,19 +291,32 @@ void CWheelBoard::Reset(void)
 UINT8 CWheelBoard::Read(void)
 {
   if (IsDisabled()) return 0xFF;
-  return HLERead();        // never calls Z80
+  if (m_simulated)
+    return HLERead();
+  else
+    return CDriveBoard::Read();
 }
 
 void CWheelBoard::Write(UINT8 data)
 {
   if (IsDisabled()) return;
-  HLEWrite(data);          // never calls Z80
+  if (m_simulated)
+    HLEWrite(data);
+  else
+  {
+    CDriveBoard::Write(data);
+    if (data == 0xCB)
+      m_initialized = false;
+  }
 }
 
 void CWheelBoard::RunFrame(void)
 {
   if (IsDisabled()) return;
-  HLEFrame();              // never calls CDriveBoard::RunFrame()
+  if (m_simulated)
+    HLEFrame();
+  else
+    CDriveBoard::RunFrame();
 }
 
 // ===========================================================================
@@ -746,7 +775,7 @@ void CWheelBoard::SendSelfCenter(UINT8 val)
   {
     // Xbox fallback: self-center → gentle constant rumble on large motor
     float norm = (float)val / 255.0f;
-    GamepadRumble(norm * 1.0f, norm * 0.7f);  // self-center spring feel
+    GamepadRumble(norm * 0.9f, norm * 0.3f);  // self-center spring feel
   }
   else
   {
@@ -786,7 +815,7 @@ void CWheelBoard::SendFriction(UINT8 val)
   {
     // Xbox fallback: friction → small motor (high-freq texture feel)
     float norm = (float)val / 255.0f;
-    GamepadRumble(norm * 0.8f, norm);  // friction: both motors
+    GamepadRumble(norm * 0.7f, norm);  // friction: both motors
   }
   else
   {
@@ -1023,8 +1052,8 @@ CWheelBoard::CWheelBoard(const Util::Config::Node &config)
   m_hleCabinetType = 0;
   m_steeringParam  = 0;
 
-  // HLE always active
-  m_simulated = true;
+  // m_simulated is determined in Reset() based on ROM presence
+  m_simulated = false;
 
   DebugLog("Built Drive Board (wheel) [HLE / SDL Haptic]\n");
 }
