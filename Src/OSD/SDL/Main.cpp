@@ -22,7 +22,7 @@
 /*
  * Main.cpp
  *
- * This code is enhanced with Claude by ANthropic. 
+ * This code is enhanced with Claude by Anthropic. 
  * Main program driver for the SDL port.
  *
  * Bugs and Issues to Address
