@@ -23,7 +23,7 @@
 /*
  * WheelBoard.h
  *
- * This code is enhanced with Claude by ANthropic. 
+ * This code is enhanced with Claude by Anthropic. 
  * Header for the CWheelBoard (force feedback emulation for wheel) class.
  *
  * HLE mode: Z80 ROM is not required. All force feedback commands from the PPC
