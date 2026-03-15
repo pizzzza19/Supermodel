@@ -255,24 +255,11 @@ void CWheelBoard::Reset(void)
   m_lastConstForce = 0; m_lastSelfCenter = 0;
   m_lastFriction   = 0; m_lastVibrate    = 0;
 
-  // Use HLE only when no drive board ROM is present.
-  // If ROM is available, fall back to Z80 emulation (original behaviour).
-  // CDriveBoard::Reset() calls Disable() when ROM is missing, so we check
-  // IsDisabled() to detect the ROM-less case and re-enable with HLE.
-  if (IsDisabled())
-  {
-    // No ROM found — enable HLE mode
-    m_simulated = true;
-    // Re-enable the board (CDriveBoard::Reset set it disabled due to missing ROM)
-    // Only re-enable if ForceFeedback config is on
-    if (m_config["ForceFeedback"].ValueAsDefault<bool>(false))
-      CDriveBoard::Enable();
-  }
-  else
-  {
-    // ROM present — use Z80 emulation, HLE SDL output still active
-    m_simulated = false;
-  }
+  // Select HLE or Z80 emulation:
+  //   DriveBoardHLE=1 in config → always use HLE (no Z80 ROM needed)
+  //   DriveBoardHLE=0 (default) → use Z80 emulation if ROM is present
+  bool forceHLE = m_config["DriveBoardHLE"].ValueAsDefault<bool>(false);
+  m_simulated = forceHLE || (m_rom == nullptr);
 
   // Detect game type from cabinet byte received during init (reset to unknown)
   m_hleGameType = HLE_GAME_UNKNOWN;
@@ -1052,7 +1039,8 @@ CWheelBoard::CWheelBoard(const Util::Config::Node &config)
   m_hleCabinetType = 0;
   m_steeringParam  = 0;
 
-  // m_simulated is determined in Reset() based on ROM presence
+  // m_simulated is determined in Reset() based on ROM presence:
+  //   m_rom == nullptr → HLE,  m_rom != nullptr → Z80 emulation
   m_simulated = false;
 
   DebugLog("Built Drive Board (wheel) [HLE / SDL Haptic]\n");
