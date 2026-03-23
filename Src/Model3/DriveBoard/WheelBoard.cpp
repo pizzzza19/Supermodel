@@ -23,7 +23,6 @@
 /*
  * WheelBoard.cpp
  *
- * This code is enhanced with Claude by Anthropic. 
  * HLE (High Level Emulation) replacement for the drive board Z80 ROM.
  * Force feedback commands from the PPC are decoded directly here and
  * forwarded to SDL Haptic — no Z80 ROM required.
