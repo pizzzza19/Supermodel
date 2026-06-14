@@ -93,6 +93,7 @@
 #include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
+#include "Model3/DriveBoard/WheelBoard.h"
 #include "OSD/Audio.h"
 #include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
@@ -1016,6 +1017,23 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Reset emulator
   Model3->Reset();
 
+  // Initialize SDL Haptic for HLE force feedback (no Z80 ROM required).
+  // Must be called after Reset() so the drive board instance is active.
+  {
+    CModel3 *m3 = dynamic_cast<CModel3 *>(Model3);
+    if (m3 && m3->GetDriveBoard())
+    {
+      CWheelBoard *wheelBoard = dynamic_cast<CWheelBoard *>(m3->GetDriveBoard());
+      if (wheelBoard)
+      {
+        if (wheelBoard->InitSDLHaptic())
+          InfoLog("SDL Haptic initialized for force feedback.");
+        else
+          ErrorLog("SDL Haptic initialization failed. Force feedback disabled.");
+      }
+    }
+  }
+
   // Load initial save state if requested
   if (!initialState.empty())
     LoadState(Model3, initialState);
@@ -1523,6 +1541,7 @@ Util::Config::Node DefaultConfig()
   config.Set("LegacySoundDSP", false, "Sound"); // New config option for games that do not play correctly with MAME's SCSP sound core.
   // CDriveBoard
   config.Set("ForceFeedback", false, "ForceFeedback");
+  config.Set("DriveBoardHLE", false, "DriveBoardHLE");  // Use HLE force feedback (no Z80 ROM required)
   
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
@@ -2001,6 +2020,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-simulate-netboard",   { "SimulateNet",      true } },
     { "-emulate-netboard",    { "SimulateNet",      false } },
     { "-no-force-feedback",   { "ForceFeedback",    false } },
+    { "-drive-board-hle",     { "DriveBoardHLE",    true  } },  // Force HLE drive board emulation
     { "-force-feedback",      { "ForceFeedback",    true } },
     { "-dump-memory",         { "DumpMemory",       true } },
     { "-dump-textures",       { "DumpTextures",     true } },
