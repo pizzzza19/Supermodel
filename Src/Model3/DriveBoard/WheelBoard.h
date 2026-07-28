@@ -179,6 +179,29 @@ private:
   UINT8 m_uncenterVal1;   // First part of pending uncenter command
   UINT8 m_uncenterVal2;   // Second part of pending uncenter command
 
+  UINT8 m_steeringParam;  // Last steering sensitivity/deadzone parameter received (0x70-0x7F command, currently unused)
+
+  // HLE-only tunable strength scales (config-driven; see Reset()). Applied only to
+  // values decoded in the HLE path (SimulateWrite/PlaySequence*), not to the real
+  // Z80/encoder path, so as not to alter hardware-accurate behavior there.
+  float m_hleConstForceScale; // Scales jolt / collision impacts (PlaySequenceJolt)
+  float m_hleSelfCenterScale; // Scales self-centering strength (0x10-0x1F)
+  float m_hleFrictionScale;   // Scales friction strength (0x20-0x2F, power-slide)
+  float m_hleVibrateScale;    // Scales rumble/curb/uncenter vibration strength
+
+  // One-shot "play sequence" effects (case 0: jolt/rumble triggers) are transient
+  // pulses on real hardware -- the board's own firmware decays them automatically
+  // after a short time. We must emulate that decay ourselves (via these countdown
+  // timers, ticked once per frame in SimulateFrame()) since nothing else here ever
+  // explicitly turns them back off. Without this, a one-shot jolt/rumble trigger
+  // that isn't followed by a stop command sticks on forever.
+  UINT16 m_hleJoltTimer;          // Frames remaining before auto-stopping the current jolt
+  UINT16 m_hleRumbleTimer;        // Frames remaining before auto-stopping the current rumble
+  UINT16 m_hleJoltDurationFrames;   // Configured jolt pulse duration, in frames
+  UINT16 m_hleRumbleDurationFrames; // Configured rumble pulse duration, in frames
+
+  bool m_hleTrace; // If true, log every raw command byte SimulateWrite() receives (diagnostic aid)
+
   // Feedback state
   INT8 m_lastConstForce;  // Last constant force command sent
   UINT8 m_lastSelfCenter; // Last self center command sent
@@ -202,6 +225,15 @@ private:
   void SendFriction(UINT8 val);
 
   void SendVibrate(UINT8 val);
+
+  // HLE preset-sequence helpers (0x00-0x0F "play sequence" and 0x40-0x4F "power-slide"
+  // commands); decoded directly from PPC commands and routed through the Send*()
+  // force feedback helpers above.
+  void PlaySequenceJolt(INT8 strength);
+
+  void PlaySequenceRumble(UINT8 strength);
+
+  void PlaySequencePowerSlide(UINT8 strength);
 
   uint8_t ReadADCChannel1() const;
 
