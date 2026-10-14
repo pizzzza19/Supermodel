@@ -26,18 +26,8 @@
  * Implementation of the CWheelBoard class: drive board (force feedback for wheel)
  * emulation.
  *
- * Two modes are supported:
- *
- *   - Z80 emulation:   the default (m_simulated == false). Requires a drive board
- *                       ROM to be attached, as before.
- *
- *   - HLE simulation:  enabled by setting DriveBoardHLE=1 in the config
- *                       (m_simulated == true). PPC commands are decoded directly
- *                       in SimulateWrite()/ProcessEncoderCmd() and routed through
- *                       the same Send*() force feedback helpers used by the Z80
- *                       path, so output always goes through the CInputs/
- *                       ForceFeedbackCmd abstraction rather than talking to a
- *                       specific FF backend (e.g. SDL_Haptic) directly.
+ * DriveBoardHLE enables command-level fallback for Scud, Daytona 2 and Rally 2.
+ * Preset waveforms and transfer curves are approximations without drive firmware.
  */
 
 #include "WheelBoard.h"
@@ -45,24 +35,6 @@
 #include "Supermodel.h"
 #include <cstdio>
 #include <algorithm>
-#include <cmath>
-
-// Scales an HLE-decoded strength value by a user-configurable multiplier and
-// clamps it to the valid range, so out-of-range scale factors in the config
-// cannot overflow the underlying force feedback command.
-static INT8 ScaleS8(INT8 val, float scale)
-{
-  long scaled = std::lround((float)val * scale);
-  scaled = std::max<long>(-128, std::min<long>(127, scaled));
-  return (INT8)scaled;
-}
-
-static UINT8 ScaleU8(UINT8 val, float scale)
-{
-  long scaled = std::lround((float)val * scale);
-  scaled = std::max<long>(0, std::min<long>(255, scaled));
-  return (UINT8)scaled;
-}
 
 Game::DriveBoardType CWheelBoard::GetType(void) const
 {
@@ -83,17 +55,41 @@ void CWheelBoard::SaveState(CBlockFile *SaveState)
 
   SaveState->NewBlock("WheelBoard", __FILE__);
   SaveState->Write(m_simulated);
+  if (m_simulated)
+  {
+    SaveState->NewBlock("WheelBoardHLE.1", __FILE__);
+    SaveState->Write(m_initialized);
+    SaveState->Write(m_initState);
+    SaveState->Write(m_statusFlags);
+    SaveState->Write(m_boardMode);
+    SaveState->Write(m_readMode);
+    SaveState->Write(m_wheelCenter);
+    SaveState->Write(m_echoVal);
+    SaveState->Write(m_dip1);
+    SaveState->Write(m_dip2);
+    SaveState->Write(m_hle.state.torque);
+    SaveState->Write(m_hle.state.jolt);
+    SaveState->Write(m_hle.state.center);
+    SaveState->Write(m_hle.state.vibration);
+    SaveState->Write(m_hle.state.gain);
+    SaveState->Write(m_hle.state.motor);
+    SaveState->Write(m_hle.state.burst);
+    SaveState->Write(m_hle.state.slide);
+    SaveState->Write(m_hle.state.joltTicks);
+    SaveState->Write(m_hle.state.burstTicks);
+    SaveState->Write(m_hle.state.slideTicks);
+  }
+  else
+  {
+    // Save DIP switches and digit displays
+    SaveState->Write(m_dip1);
+    SaveState->Write(m_dip2);
 
-  // DIP switches, digit displays, and ADC/uncenter state are used by IORead8()/
-  // IOWrite8(), which are shared between HLE and Z80 emulation, so save them
-  // unconditionally rather than only in the non-simulated branch.
-  SaveState->Write(m_dip1);
-  SaveState->Write(m_dip2);
-
-  SaveState->Write(m_adcPortRead);
-  SaveState->Write(m_adcPortBit);
-  SaveState->Write(m_uncenterVal1);
-  SaveState->Write(m_uncenterVal2);
+    SaveState->Write(m_adcPortRead);
+    SaveState->Write(m_adcPortBit);
+    SaveState->Write(m_uncenterVal1);
+    SaveState->Write(m_uncenterVal2);
+  }
 }
 
 void CWheelBoard::LoadState(CBlockFile *SaveState)
@@ -105,22 +101,53 @@ void CWheelBoard::LoadState(CBlockFile *SaveState)
 
   bool wasSimulated;
   SaveState->Read(&wasSimulated, sizeof(wasSimulated));
-  (void)wasSimulated;
-  // Note: whether HLE or Z80 emulation is used is (re-)determined in Reset() from
-  // the DriveBoardHLE config option, not restored from the save state, so a
-  // mismatch against wasSimulated here is not itself fatal. (CDriveBoard::LoadState,
-  // called below, does separately disable the board if wasSimulated != m_simulated,
-  // since a save made in the other mode is genuinely incompatible.)
+  if (wasSimulated)
+  {
+    if (SaveState->FindBlock("WheelBoardHLE.1") != Result::OKAY)
+    {
+      Disable();
+      ErrorLog("Missing HLE drive board state.");
+      return;
+    }
+    SaveState->Read(m_initialized);
+    SaveState->Read(m_initState);
+    SaveState->Read(m_statusFlags);
+    SaveState->Read(m_boardMode);
+    SaveState->Read(m_readMode);
+    SaveState->Read(m_wheelCenter);
+    SaveState->Read(m_echoVal);
+    SaveState->Read(m_dip1);
+    SaveState->Read(m_dip2);
+    SaveState->Read(m_hle.state.torque);
+    SaveState->Read(m_hle.state.jolt);
+    SaveState->Read(m_hle.state.center);
+    SaveState->Read(m_hle.state.vibration);
+    SaveState->Read(m_hle.state.gain);
+    SaveState->Read(m_hle.state.motor);
+    SaveState->Read(m_hle.state.burst);
+    SaveState->Read(m_hle.state.slide);
+    SaveState->Read(m_hle.state.joltTicks);
+    SaveState->Read(m_hle.state.burstTicks);
+    SaveState->Read(m_hle.state.slideTicks);
+  }
+  else
+  {
+    // Load DIP switches and digit displays
+    SaveState->Read(m_dip1);
+    SaveState->Read(m_dip2);
 
-  SaveState->Read(m_dip1);
-  SaveState->Read(m_dip2);
-
-  SaveState->Read(m_adcPortRead);
-  SaveState->Read(m_adcPortBit);
-  SaveState->Read(m_uncenterVal1);
-  SaveState->Read(m_uncenterVal2);
+    SaveState->Read(m_adcPortRead);
+    SaveState->Read(m_adcPortBit);
+    SaveState->Read(m_uncenterVal1);
+    SaveState->Read(m_uncenterVal2);
+  }
 
   CDriveBoard::LoadState(SaveState);
+  if (m_simulated)
+  {
+    SendStopAll();
+    if (!IsDisabled()) UpdateHLEEffects();
+  }
 }
 
 void CWheelBoard::Disable(void)
@@ -153,36 +180,17 @@ void CWheelBoard::Reset(void)
   m_lastFriction = 0;
   m_lastVibrate = 0;
 
-  m_steeringParam = 0;
-
-  // Select HLE or Z80 emulation. Note: m_rom is never null once initialized (Init()
-  // assigns either the real ROM or a valid dummy ROM buffer even when detached), and
-  // a detached/disabled board never reaches SimulateWrite/SimulateRead/SimulateFrame
-  // regardless of m_simulated, so ROM presence cannot be (and does not need to be)
-  // used to auto-select HLE here. Instead, this is purely config-driven, exactly as
-  // originally intended by the "make this run-time configurable" TODO:
-  //   DriveBoardHLE=1 -> decode PPC commands directly (no drive board ROM/Z80 needed)
-  //   DriveBoardHLE=0 (default) -> real Z80 emulation, preserving prior behavior
-  m_simulated = m_config["DriveBoardHLE"].ValueAsDefault<bool>(false);
-
-  // Per-category HLE vibration strength tuning (1.0 = unmodified). Values are
-  // clamped to the valid FFB range in ScaleS8()/ScaleU8() below regardless of
-  // how the multiplier is set, so out-of-range config values cannot overflow.
-  m_hleConstForceScale = m_config["DriveBoardHLEJoltScale"].ValueAsDefault<float>(1.0f);
-  m_hleSelfCenterScale = m_config["DriveBoardHLECenterScale"].ValueAsDefault<float>(1.0f);
-  m_hleFrictionScale   = m_config["DriveBoardHLEFrictionScale"].ValueAsDefault<float>(1.0f);
-  m_hleVibrateScale    = m_config["DriveBoardHLEVibrateScale"].ValueAsDefault<float>(1.0f);
-
-  // Duration (in frames, ~60/frame-rate seconds) that a one-shot jolt/rumble
-  // trigger plays before auto-stopping. See declaration comment for why this
-  // is needed.
-  m_hleJoltDurationFrames   = m_config["DriveBoardHLEJoltDurationFrames"].ValueAsDefault<unsigned>(6);
-  m_hleRumbleDurationFrames = m_config["DriveBoardHLERumbleDurationFrames"].ValueAsDefault<unsigned>(12);
-  m_hleJoltTimer = 0;
-  m_hleRumbleTimer = 0;
-
-  // Diagnostic: log every raw HLE command byte received (see SimulateWrite()).
-  m_hleTrace = m_config["DriveBoardHLETrace"].ValueAsDefault<bool>(false);
+  m_simulated = m_config["DriveBoardHLE"].ValueAsDefault<bool>(false) &&
+                m_hle.profile != CWheelBoardHLE::Profile::Unsupported;
+  m_hle.Stop();
+  m_statusFlags = 0;
+  m_echoVal = 0;
+  m_hle.joltDuration = std::max(1u, std::min(65535u, m_config["DriveBoardHLEJoltDurationFrames"].ValueAsDefault<unsigned>(6)));
+  m_hle.rumbleDuration = std::max(1u, std::min(65535u, m_config["DriveBoardHLERumbleDurationFrames"].ValueAsDefault<unsigned>(12)));
+  m_hle.slideDuration = std::max(1u, std::min(65535u, m_config["DriveBoardHLESlideDurationFrames"].ValueAsDefault<unsigned>(144)));
+  InfoLog("Drive board: HLE=%s profile=%u force-feedback=%s",
+          m_simulated ? "enabled" : "disabled", (unsigned)m_hle.profile,
+          m_config["ForceFeedback"].ValueAsDefault<bool>(false) ? "enabled" : "disabled");
 
   if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
     Disable();
@@ -249,9 +257,7 @@ UINT8 CWheelBoard::SimulateRead(void)
   }
   else
   {
-    // Compressed init: answer the handshake quickly (2 frames/step instead of 5)
-    // so the game does not stall waiting for the (nonexistent) board to boot.
-    switch (m_initState / 2)
+    switch (m_initState / 5)
     {
       case 0:  return 0xCF;  // Initiate start
       case 1:  return 0xCE;
@@ -264,123 +270,31 @@ UINT8 CWheelBoard::SimulateRead(void)
   }
 }
 
+void CWheelBoard::UpdateHLEEffects()
+{
+  if (!m_inputs || !m_inputs->steering || IsDisabled()) return;
+  const auto effects = m_hle.Get();
+  SendConstantForce((INT8)std::lround(effects.torque * (effects.torque >= 0 ? 127.0f : 128.0f)));
+  SendSelfCenter((UINT8)std::lround(effects.center * 255.0f));
+  SendVibrate((UINT8)std::lround(effects.vibration * 255.0f));
+}
+
 void CWheelBoard::SimulateWrite(UINT8 cmd)
 {
-  // Following are commands for Scud Race.  Daytona 2 has a compatible command set while Sega Rally 2 is completely different
-  // TODO - finish for Scud Race and Daytona 2
-  // TODO - implement for Sega Rally 2
-  UINT8 type = cmd>>4;
-  UINT8 val = cmd&0xF;
-
-  if (m_hleTrace)
-    DebugLog("HLE Write: cmd=%02X (type=%X val=%X)\n", cmd, type, val);
-
-  switch (type)
+  m_hle.Write(cmd);
+  const UINT8 type = cmd >> 4, val = cmd & 15;
+  if (type == 0xD) m_readMode = val & 7;
+  else if (type == 0xF) m_echoVal = val;
+  else if (type == 8 && (val & 7) == 5 && m_inputs)
+    m_wheelCenter = (UINT8)m_inputs->steering->value;
+  else if (type == 0xC)
   {
-  case 0: // 0x00-0F Play preset sequence
-    // Known sequences observed in Scud Race / Daytona 2 traces:
-    switch (val)
-    {
-    case 0x0: SendStopAll(); m_hleJoltTimer = 0; m_hleRumbleTimer = 0;       break; // 0x00 Stop all
-    case 0x1: PlaySequenceJolt(+30);  m_hleJoltTimer   = m_hleJoltDurationFrames;   break; // Light jolt right
-    case 0x2: PlaySequenceJolt(-30);  m_hleJoltTimer   = m_hleJoltDurationFrames;   break; // Light jolt left
-    case 0x3: PlaySequenceRumble(80); m_hleRumbleTimer = m_hleRumbleDurationFrames; break; // Road rumble
-    case 0x4: PlaySequenceJolt(+80);  m_hleJoltTimer   = m_hleJoltDurationFrames;   break; // Hard collision
-    case 0x5: PlaySequenceRumble(40); m_hleRumbleTimer = m_hleRumbleDurationFrames; break; // Curb
-    case 0x6: PlaySequenceRumble(60); m_hleRumbleTimer = m_hleRumbleDurationFrames; break; // Sustained rumble
-    default:  DebugLog("Unknown play sequence 0x0%X\n", val); break;
-    }
-    break;
-  case 1: // 0x10-1F Set centering strength
-    if (val == 0)
-      // Disable auto-centering
-      // TODO - is 0x10 for disable?
-      SendSelfCenter(0);
-    else
-      // Enable auto-centering (0x1 = weakest, 0xF = strongest)
-      SendSelfCenter(ScaleU8(val * 0x11, m_hleSelfCenterScale));
-    break;
-  case 2: // 0x20-2F Friction strength
-    if (val == 0)
-      // Disable friction
-      // TODO - is 0x20 for disable?
-      SendFriction(0);
-    else
-      // Enable friction (0x1 = weakest, 0xF = strongest)
-      SendFriction(ScaleU8(val * 0x11, m_hleFrictionScale));
-    break;
-  case 3: // 0x30-3F Uncentering (vibrate)
-    if (val == 0)
-      // Disable uncentering
-      SendVibrate(0);
-    else
-      // Enable uncentering (0x1 = weakest, 0xF = strongest)
-      SendVibrate(ScaleU8(val * 0x11, m_hleVibrateScale));
-    break;
-  case 4: // 0x40-4F Play power-slide sequence
-    if (val == 0)
-      SendVibrate(0);
-    else
-      PlaySequencePowerSlide(val * 0x11);
-    break;
-  case 5: // 0x50-5F Rotate wheel right
-    // HLE FFB reproduction for this command disabled at user's request.
-    //SendConstantForce((val + 1) * 0x5);
-    break;
-  case 6: // 0x60-6F Rotate wheel left
-    // HLE FFB reproduction for this command disabled at user's request.
-    //SendConstantForce(-(val + 1) * 0x5);
-    break;
-  case 7: // 0x70-7F Set steering parameters
-    m_steeringParam = val;
-    DebugLog("Steering param: %X\n", val);
-    break;
-  case 8: // 0x80-8F Test Mode
-    switch (val & 0x7)
-    {
-    case 0:  SendStopAll();                                    break;  // 0x80 Stop motor
-    case 1:  /* HLE FFB reproduction disabled at user's request */ break;  // 0x81 Roll wheel right
-    case 2:  /* HLE FFB reproduction disabled at user's request */ break;  // 0x82 Roll wheel left
-    case 3:  /* Ignore - no clutch */                          break;  // 0x83 Clutch on
-    case 4:  /* Ignore - no clutch */                          break;  // 0x84 Clutch off
-    case 5:  m_wheelCenter = (UINT8)m_inputs->steering->value; break;  // 0x85 Set wheel center position
-    case 6:  /* Ignore */                                      break;  // 0x86 Set cockpit banking position
-    case 7:  /* Ignore */                                      break;  // 0x87 Lamp on/off
-    }
-    break;
-  case 0x9: // 0x90-9F ??? Don't appear to have any effect with Scud Race ROM
-    /* TODO */
-    break;
-  case 0xA: // 0xA0-AF ??? Don't appear to have any effect with Scud Race ROM
-    /* TODO */
-    break;
-  case 0xB: // 0xB0-BF Invalid command (reserved for use by PPC to send cabinet type 0xB0 or 0xB1 during initialization)
-    if (cmd == 0xB0 || cmd == 0xB1)
-      DebugLog("Cabinet type: %02X\n", cmd);
-    break;
-  case 0xC: // 0xC0-CF Set board mode (0xCB = reset board)
-    SendStopAll();
-    m_hleJoltTimer = 0;
-    m_hleRumbleTimer = 0;
-    if (val >= 0xB)
-    {
-      // Reset board
-      m_initialized = false;
-      m_initState = 0;
-    }
-    else
-      m_boardMode = val;
-    break;
-  case 0xD: // 0xD0-DF Set read mode
-    m_readMode = val & 0x7;
-    break;
-  case 0xE: // 0xE0-EF Invalid command
-    /* Ignore */
-    break;
-  case 0xF: // 0xF0-FF Echo test
-    m_echoVal = val;
-    break;
+    m_boardMode = val;
+    if (val >= 0xB) { m_initialized = false; m_initState = 0; }
+    else if (cmd == 0xC7 && m_hle.profile == CWheelBoardHLE::Profile::Rally2)
+      m_initialized = true;
   }
+  UpdateHLEEffects();
 }
 
 void CWheelBoard::RunFrame(void)
@@ -400,20 +314,8 @@ void CWheelBoard::SimulateFrame(void)
 {
   if (!m_initialized)
     m_initState++;
-
-  // Auto-decay one-shot jolt/rumble triggers (see member comments in the header
-  // for why this is necessary -- without it, a jolt/rumble that isn't followed
-  // by an explicit stop command would vibrate forever).
-  if (m_hleJoltTimer > 0)
-  {
-    if (--m_hleJoltTimer == 0)
-      SendConstantForce(0);
-  }
-  if (m_hleRumbleTimer > 0)
-  {
-    if (--m_hleRumbleTimer == 0)
-      SendVibrate(0);
-  }
+  m_hle.Tick();
+  UpdateHLEEffects();
 }
 
 UINT8 CWheelBoard::IORead8(UINT32 portNum)
@@ -625,25 +527,6 @@ void CWheelBoard::ProcessEncoderCmd(void)
 }
 
 
-// Short constant-force jolt (one-shot pulse; overridden naturally by the next command)
-void CWheelBoard::PlaySequenceJolt(INT8 strength)
-{
-  SendConstantForce(ScaleS8(strength, m_hleConstForceScale));
-}
-
-// Vibration burst for rumble / road texture / curb effects
-void CWheelBoard::PlaySequenceRumble(UINT8 strength)
-{
-  SendVibrate(ScaleU8(strength, m_hleVibrateScale));
-}
-
-// Power-slide: combine friction with a milder accompanying vibration
-void CWheelBoard::PlaySequencePowerSlide(UINT8 strength)
-{
-  SendFriction(ScaleU8(strength, m_hleFrictionScale));
-  SendVibrate(ScaleU8(strength >> 1, m_hleVibrateScale));
-}
-
 void CWheelBoard::SendStopAll(void)
 {
   //DebugLog(">> Stop All Effects\n");
@@ -777,8 +660,8 @@ uint8_t CWheelBoard::ReadADCChannel4() const
   return 0x00;
 }
 
-CWheelBoard::CWheelBoard(const Util::Config::Node &config)
-  : CDriveBoard(config)
+CWheelBoard::CWheelBoard(const Util::Config::Node &config, const std::string& game)
+  : CDriveBoard(config), m_hle(game)
 {
   m_dip1 = 0xCF;
   m_dip2 = 0xFF;
@@ -799,20 +682,6 @@ CWheelBoard::CWheelBoard(const Util::Config::Node &config)
 
   m_uncenterVal1 = 0;
   m_uncenterVal2 = 0;
-
-  m_steeringParam = 0;
-
-  m_hleConstForceScale = 1.0f;
-  m_hleSelfCenterScale = 1.0f;
-  m_hleFrictionScale   = 1.0f;
-  m_hleVibrateScale    = 1.0f;
-
-  m_hleJoltTimer = 0;
-  m_hleRumbleTimer = 0;
-  m_hleJoltDurationFrames = 6;
-  m_hleRumbleDurationFrames = 12;
-
-  m_hleTrace = false;
 
   // Feedback state
   m_lastConstForce = 0;

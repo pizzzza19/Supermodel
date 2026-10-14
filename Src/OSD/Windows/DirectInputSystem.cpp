@@ -122,7 +122,7 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "Y",					DIK_Y },
 	{ "Z",					DIK_Z },
 	{ "DEL",				DIK_DELETE },
-	
+
 	// Keypad
 	{ "KEYPAD0",			DIK_NUMPAD0 },
 	{ "KEYPAD1",			DIK_NUMPAD1 },
@@ -169,8 +169,8 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "F13",				DIK_F13 },
 	{ "F14",				DIK_F14 },
 	{ "F15",				DIK_F15 },
-    
-	// Modifier Keys  
+
+	// Modifier Keys
 	{ "NUMLOCK",			DIK_NUMLOCK },
 	{ "CAPSLOCK",			DIK_CAPITAL },
 	{ "SCROLLLOCK",			DIK_SCROLL },
@@ -186,12 +186,12 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "LEFTWINDOWS",		DIK_LWIN },
 	//{ "ALTGR",			?? },
 	//{ "COMPOSE",			?? },
-    
+
 	// Other
 	//{ "HELP",				?? },
 	{ "PRINT",				DIK_SYSRQ },
 	//{ "SYSREQ",			?? },
-	//{ "BREAK",			?? },								
+	//{ "BREAK",			?? },
 	//{ "MENU",				?? },
 	//{ "POWER",			?? },
 	//{ "EURO",				?? },
@@ -200,10 +200,10 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 
 static bool IsXInputDevice(const GUID &devProdGUID)
 {
-	// Following code taken from MSDN
-	IWbemLocator* pIWbemLocator  = NULL;
+    // Following code taken from MSDN
+    IWbemLocator* pIWbemLocator  = NULL;
     IEnumWbemClassObject* pEnumDevices = NULL;
-    IWbemClassObject* pDevices[20] = {0};
+    IWbemClassObject* pDevices[20] = {};
     IWbemServices* pIWbemServices = NULL;
     BSTR bstrNamespace = NULL;
     BSTR bstrDeviceID = NULL;
@@ -1795,11 +1795,12 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					// If so, stop vibration due to force effect
 					pInfo->xiConstForceLeft = 0;
 					pInfo->xiConstForceRight = 0;
-					pInfo->xiVibrateBoth = 0;
 				}
 				else if (bothMotorVib)
 				{
-					pInfo->xiVibrateBoth = (WORD)(absForce * (float)(xInputConstForceMax * XI_VIBRATE_SCALE));
+					// Keep torque and vibration independent, even when both use both motors.
+					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(xInputConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceRight = pInfo->xiConstForceLeft;
 				}
 				else if (negForce)
 				{
@@ -1845,8 +1846,9 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		}
 
 		// Combine vibration speeds from both constant force effect and vibration effect and set motors in action
-		vibration.wLeftMotorSpeed = std::min<WORD>(pInfo->xiConstForceLeft + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
-		vibration.wRightMotorSpeed = std::min<WORD>(pInfo->xiConstForceRight + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		// Clamp before narrowing to WORD, otherwise overlapping effects wrap at 65536.
+		vibration.wLeftMotorSpeed = (WORD)std::min<unsigned>(unsigned(pInfo->xiConstForceLeft) + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		vibration.wRightMotorSpeed = (WORD)std::min<unsigned>(unsigned(pInfo->xiConstForceRight) + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
 		return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 	}
 	else
@@ -2097,14 +2099,14 @@ bool CDirectInputSystem::Poll()
 	}
 
 	// SDL2: I'm not sure how the SDL1.x code was detecting quit events but in
-  // SDL2, it seems that we want to explicitly run SDL_PollEvent() after we
-  // have peeked at the message queue ourselves (above).
-	// Wait or poll for event from SDL
+	// SDL2, it seems that we want to explicitly run SDL_PollEvent() after we
+	// have peeked at the message queue ourselves (above).
+	// Wait or poll for event from SDL, unless the host handles the events itself (see SetPollConsumesEvents)
 	SDL_Event e;
-	while (SDL_PollEvent(&e))
+	while (m_pollConsumesEvents && SDL_PollEvent(&e))
 	{
 		if (e.type == SDL_QUIT)
-			return false;	
+			return false;
 	}
 
 	// Poll keyboards, mice and joysticks

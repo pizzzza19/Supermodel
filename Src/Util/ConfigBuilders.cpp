@@ -40,7 +40,7 @@ namespace Util
 
       // Push the top level of the XML tree
       for (const XMLElement *e = xml.RootElement(); e != 0; e = e->NextSiblingElement())
-        q.push( { e, config } );
+        q.emplace(e, config);
 
       // Process the elements in order, pushing subsequent levels along with the
       // config nodes to add them to
@@ -59,7 +59,7 @@ namespace Util
 
         // Push all child elements
         for (const XMLElement *e = element->FirstChildElement(); e != 0; e = e->NextSiblingElement())
-          q.push( { e, node } );
+          q.emplace(e, node);
       }
     }
 
@@ -290,6 +290,29 @@ namespace Util
                 }
             }
           }
+      }
+    }
+
+    /*
+     * Copies the settings of one INI section into another.
+     *
+     * - Settings from src overwrite those already present in dest; settings not
+     *   present in dest are appended.
+     * - Nodes with children are ignored as per INI semantics (they are sections,
+     *   not settings), so any sections hanging off dest are left untouched. This
+     *   allows the global section of a config to be updated in place without
+     *   disturbing the game-specific sections.
+     * - Values are copied rather than shared so that dest does not alias src.
+     * - dest's key is retained.
+     */
+    void CopyINISection(Node *dest, const Node &src)
+    {
+      for (auto it = src.begin(); it != src.end(); ++it)
+      {
+        if (it->IsLeaf() && it->Exists())
+        {
+          dest->Set(it->Key(), it->GetValue()->MakeCopy());
+        }
       }
     }
 

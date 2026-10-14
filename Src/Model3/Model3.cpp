@@ -1958,7 +1958,7 @@ void CModel3::RunFrame(void)
     // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd) and drive board (if attached) so they can process a frame
     if ((m_gpuMultiThreaded       && !ppcBrdThreadSync->Post()) ||
         (syncSndBrdThread         && !sndBrdThreadSync->Post()) ||
-        (DriveBoard->IsAttached()  && !drvBrdThreadSync->Post()))
+        (DriveBoard->IsAttached() && !DriveBoard->IsSimulated() && !drvBrdThreadSync->Post()))
       goto ThreadError;
 
     // If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
@@ -1978,7 +1978,7 @@ void CModel3::RunFrame(void)
     // Wait for PPC main board, sound board and drive board threads to finish their work (if they are running and haven't finished already)
     while ((m_gpuMultiThreaded      && !ppcBrdThreadDone) ||
            (syncSndBrdThread        && !sndBrdThreadDone) ||
-           (DriveBoard->IsAttached() && !drvBrdThreadDone))
+           (DriveBoard->IsAttached() && !DriveBoard->IsSimulated() && !drvBrdThreadDone))
     {
       if (!notifySync->Wait(notifyLock))
         goto ThreadError;
@@ -1990,6 +1990,11 @@ void CModel3::RunFrame(void)
     // Leave notify wait critical section
     if (!notifyLock->Unlock())
       goto ThreadError;
+
+    // HLE shares command/effect state with PPC writes. Tick after PPC has finished,
+    // rather than racing a separate drive-board thread against those writes.
+    if (DriveBoard->IsAttached() && DriveBoard->IsSimulated())
+      RunDriveBoardFrame();
 
     // If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
     if (m_gpuMultiThreaded)
@@ -2222,7 +2227,7 @@ bool CModel3::StartThreads(void)
   sndBrdNotifySync = CThread::CreateCondVar();
   if (sndBrdNotifySync == NULL)
     goto ThreadError;
-  if (DriveBoard->IsAttached())
+  if (DriveBoard->IsAttached() && !DriveBoard->IsSimulated())
   {
     drvBrdThreadSync = CThread::CreateSemaphore(0);
     if (drvBrdThreadSync == NULL)
@@ -2256,7 +2261,7 @@ bool CModel3::StartThreads(void)
     goto ThreadError;
 
   // Create drive board thread, if drive board is attached
-  if (DriveBoard->IsAttached())
+  if (DriveBoard->IsAttached() && !DriveBoard->IsSimulated())
   {
     drvBrdThread = CThread::CreateThread("DriveBoard", StartDriveBoardThread, this);
     if (drvBrdThread == NULL)
@@ -2984,9 +2989,12 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   SoundBoard.AttachDSB(DSB);
 
   // Drive board (if present)
-  if (game.driveboard_type == Game::DRIVE_BOARD_WHEEL && rom_set.get_rom("driveboard_program").size)
+  if (game.driveboard_type == Game::DRIVE_BOARD_WHEEL &&
+      (rom_set.get_rom("driveboard_program").size ||
+       (m_config["DriveBoardHLE"].ValueAsDefault<bool>(false) &&
+        CWheelBoardHLE(game.name).profile != CWheelBoardHLE::Profile::Unsupported)))
   {
-    DriveBoard = new CWheelBoard(m_config);
+    DriveBoard = new CWheelBoard(m_config, game.name);
     if (DriveBoard->Init(driveROM) != Result::OKAY)
       return Result::FAIL;
   }
