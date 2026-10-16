@@ -61,7 +61,7 @@ Quick description on the GUI stuff
 // ---------------------------------------------------------------------------------------------------------------
 
 static const bool  s_hideUnownedGames = false;   // true: unowned games are removed from the list
-                                                // false: unowned games are blacked out so the list layout is kept
+                                                // false: unowned games are greyed out so the list layout is kept
 
 static std::string ToLowerStr(std::string s)
 {
@@ -834,11 +834,11 @@ static void DrawCalibrationDialog(Util::Config::Node& config, CalibrationState& 
         AxisValueBar(value);
 
         if (cal.sampling) {
-            cal.minVal = std::min(cal.minVal, value);
-            cal.maxVal = std::max(cal.maxVal, value);
+            cal.minVal = (std::min)(cal.minVal, value);
+            cal.maxVal = (std::max)(cal.maxVal, value);
 
             Uint32 elapsed = SDL_GetTicks() - cal.sampleStart;
-            ImGui::ProgressBar(std::min(1.0f, elapsed / float(CalibrationState::SampleTimeMs)), ImVec2(-1.0f, 0.0f), "Calibrating, keep holding...");
+            ImGui::ProgressBar((std::min)(1.0f, elapsed / float(CalibrationState::SampleTimeMs)), ImVec2(-1.0f, 0.0f), "Calibrating, keep holding...");
 
             if (elapsed >= CalibrationState::SampleTimeMs) {
                 cal.sampling = false;
@@ -964,11 +964,8 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             ImGui::TableNextRow();
 
             if (!owned) {
-                // black out the row and make it non-interactive so the layout is kept
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(0, 0, 0, 255));
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, IM_COL32(0, 0, 0, 255));
+                // grey out the row and make it non-interactive, the name stays readable
                 ImGui::BeginDisabled();
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
             }
 
             ImGui::TableSetColumnIndex(0);
@@ -990,7 +987,6 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             ImGui::Text("%s", g.second.stepping.c_str());
 
             if (!owned) {
-                ImGui::PopStyleColor();
                 ImGui::EndDisabled();
             }
 
@@ -1136,7 +1132,7 @@ static float GetDPIScale()
         SDL_Log("Failed to get DPI: %s", SDL_GetError());
         return 1.0f;
     }
-    return std::max(1.0f, ddpi / 96.0f);
+    return (std::max)(1.0f, ddpi / 96.0f);
 #else
     return 1.0f;
 #endif
