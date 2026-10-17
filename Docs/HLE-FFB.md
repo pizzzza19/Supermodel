@@ -18,6 +18,28 @@ setting it to zero uses a motor selected by torque direction.
 An Xbox controller converts wheel forces into vibration; it does not reproduce
 the physical torque or centering of the original wheel.
 
+### Scud / Daytona 2 gamepad adaptation
+
+For `InputSystem=xinput`, these profiles preserve held wheel torque internally,
+but translate changes in direct torque into a short, fading gamepad pulse.
+Repeated commands with identical torque do not prolong that pulse. Direct
+vibration commands retain their explicit stop timing. Preset and slide effects
+remain enabled with reduced amplitude. The summed torque/vibration contribution
+is limited before the XInput mix to avoid full-speed overlap.
+
+```ini
+XInputWheelRumbleAdaptation = 1
+XInputWheelRumbleMax = 35
+XInputWheelApproxScale = 25
+XInputWheelTorqueDurationFrames = 18
+```
+
+The percentages and 18-frame fade (about 0.31 seconds) are gamepad comfort
+settings, not verified original firmware behavior. Sega Rally 2 and non-XInput
+backends keep their existing output. Set `XInputWheelRumbleAdaptation=0` to
+restore the prior XInput mapping. Loading a save state clears the transient
+pad pulse without changing the saved emulated torque or the save format.
+
 ## Implemented behavior and limits
 
 - Rally 2: signed 6-bit torque commands, held until a new command or stop arrives.

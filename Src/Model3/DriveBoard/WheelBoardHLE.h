@@ -30,8 +30,10 @@ public:
   }
   Profile profile;
   uint32_t joltDuration = 6, rumbleDuration = 12, slideDuration = 144;
+  // Presentation state only: never change the emulated held wheel torque.
+  uint32_t gamepadTorqueDuration = 18, gamepadTorqueTicks = 0;
 
-  void Stop() { state = State{}; }
+  void Stop() { state = State{}; gamepadTorqueTicks = 0; }
   void StopEffects()
   {
     const uint8_t motor = state.motor, gain = state.gain;
@@ -82,7 +84,10 @@ public:
       {
         // Scud's observed direct levels use 3 bits; Daytona 2 also sends 58/5E.
         const int magnitude = profile == Profile::Scud ? val & 7 : val;
-        state.torque = int8_t(type == 5 ? magnitude : -magnitude);
+        const int8_t torque = int8_t(type == 5 ? magnitude : -magnitude);
+        if (torque != state.torque)
+          gamepadTorqueTicks = torque ? gamepadTorqueDuration : 0;
+        state.torque = torque;
         break;
       }
       case 7:
@@ -98,6 +103,7 @@ public:
   }
   void Tick()
   {
+    if (gamepadTorqueTicks) --gamepadTorqueTicks;
     if (state.joltTicks && --state.joltTicks == 0) state.jolt = 0;
     if (state.burstTicks && --state.burstTicks == 0) state.burst = 0;
     if (state.slideTicks) --state.slideTicks;
@@ -121,6 +127,31 @@ public:
     return {std::max(-1.0f, std::min(1.0f, torque * motor)),
             state.center / 7.0f * motor,
             std::min(1.0f, (state.vibration / 15.0f * gain + state.burst / 255.0f) * motor)};
+  }
+
+  Effects GetGamepad(float maximum = 0.35f, float approximateScale = 0.25f) const
+  {
+    if (profile != Profile::Scud && profile != Profile::Daytona2) return Get();
+    const float motor = (5 + state.motor) / 10.0f;
+    const float gain = state.gain / 15.0f;
+    const float range = profile == Profile::Scud ? 7.0f : 15.0f;
+    const float envelope = gamepadTorqueDuration ?
+        std::min(1.0f, float(gamepadTorqueTicks) / gamepadTorqueDuration) : 0.0f;
+    float torque = state.torque / range * gain * envelope;
+    torque += approximateScale * state.jolt / (state.jolt >= 0 ? 127.0f : 128.0f);
+    if (state.slideTicks && slideDuration)
+    {
+      const float phase = float(slideDuration - state.slideTicks) / slideDuration;
+      torque += approximateScale * ((state.slide & 8) ? -1.0f : 1.0f) *
+                (state.slide & 7) / 7.0f * std::sin(phase * 6.283185307f);
+    }
+    torque *= motor;
+    float vibration = (state.vibration / 15.0f * gain + approximateScale * state.burst / 255.0f) * motor;
+    // XInput adds both channels. Budget the sum to avoid clipping at full speed.
+    const float total = std::abs(torque) + vibration;
+    const float limit = std::max(0.0f, std::min(1.0f, maximum));
+    if (total > limit && total > 0) { torque *= limit / total; vibration *= limit / total; }
+    return {torque, 0, vibration};
   }
 };
 #endif

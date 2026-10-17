@@ -98,6 +98,7 @@ void CWheelBoard::SaveState(CBlockFile *SaveState)
 
 void CWheelBoard::LoadState(CBlockFile *SaveState)
 {
+  m_hle.gamepadTorqueTicks = 0; // Do not replay a stale pad pulse after loading.
   if (SaveState->FindBlock("WheelBoard") != Result::OKAY)
   {
     return;
@@ -196,6 +197,7 @@ void CWheelBoard::Reset(void)
   m_simulated = m_config["DriveBoardHLE"].ValueAsDefault<bool>(false) &&
                 m_hle.profile != CWheelBoardHLE::Profile::Unsupported;
   m_hle.Stop();
+  m_hle.gamepadTorqueDuration = std::max(1u, std::min(65535u, m_config["XInputWheelTorqueDurationFrames"].ValueAsDefault<unsigned>(18)));
   m_statusFlags = 0;
   m_echoVal = 0;
   m_hle.joltDuration = std::max(1u, std::min(65535u, m_config["DriveBoardHLEJoltDurationFrames"].ValueAsDefault<unsigned>(6)));
@@ -286,7 +288,11 @@ UINT8 CWheelBoard::SimulateRead(void)
 void CWheelBoard::UpdateHLEEffects()
 {
   if (!m_inputs || !m_inputs->steering || IsDisabled()) return;
-  const auto effects = m_hle.Get();
+  const bool gamepad = m_config["InputSystem"].ValueAsDefault<std::string>("") == "xinput" &&
+                       m_config["XInputWheelRumbleAdaptation"].ValueAsDefault<bool>(true);
+  const auto effects = gamepad ? m_hle.GetGamepad(
+      std::min(100u, m_config["XInputWheelRumbleMax"].ValueAsDefault<unsigned>(35)) / 100.0f,
+      std::min(100u, m_config["XInputWheelApproxScale"].ValueAsDefault<unsigned>(25)) / 100.0f) : m_hle.Get();
   SendConstantForce((INT8)std::lround(effects.torque * (effects.torque >= 0 ? 127.0f : 128.0f)));
   SendSelfCenter((UINT8)std::lround(effects.center * 255.0f));
   SendVibrate((UINT8)std::lround(effects.vibration * 255.0f));

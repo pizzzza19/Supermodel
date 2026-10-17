@@ -1576,6 +1576,10 @@ Util::Config::Node DefaultConfig()
   config.Set("DirectInputVibrateMax", 100, "ForceFeedback", 0, 100);
   // XInput ForceFeedback
   config.Set("XInputConstForceThreshold", 30, "ForceFeedback", 0, 100);
+  config.Set("XInputWheelRumbleAdaptation", true, "ForceFeedback");
+  config.Set("XInputWheelRumbleMax", 35, "ForceFeedback", 0, 100);
+  config.Set("XInputWheelApproxScale", 25, "ForceFeedback", 0, 100);
+  config.Set("XInputWheelTorqueDurationFrames", 18, "ForceFeedback", 1, 65535);
   config.Set("XInputConstForceMax", 100, "ForceFeedback", 0, 100);
   config.Set("XInputVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("XInputStereoVibration", true, "ForceFeedback");
