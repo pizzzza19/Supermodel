@@ -80,7 +80,7 @@ endif
 #
 # Construct the compiler (C and C++) and linker flags
 #
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
@@ -95,26 +95,16 @@ CXXFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CXXFLAGS))
 SRC_FILES = \
 	Src/CPU/PowerPC/PPCDisasm.cpp \
 	Src/BlockFile.cpp \
-	Src/Pkgs/unzip.cpp \
-	Src/Pkgs/ioapi.cpp \
+	Src/Pkgs/unzip.c \
+	Src/Pkgs/ioapi.c \
 	Src/Model3/93C46.cpp \
 	Src/JTAG.cpp \
-	Src/Pkgs/glew.cpp \
-	Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
-	Src/Graphics/New3D/GLSLShader.cpp \
-	Src/Graphics/New3D/R3DFrameBuffers.cpp \
-	Src/Graphics/New3D/New3D.cpp \
 	Src/Graphics/New3D/Mat4.cpp \
 	Src/Graphics/New3D/Model.cpp \
 	Src/Graphics/New3D/PolyHeader.cpp \
-	Src/Graphics/New3D/VBO.cpp \
 	Src/Graphics/New3D/Vec.cpp \
-	Src/Graphics/New3D/R3DShader.cpp \
 	Src/Graphics/New3D/R3DFloat.cpp \
-	Src/Graphics/New3D/R3DScrollFog.cpp \
-	Src/Graphics/New3D/TextureBank.cpp \
-	Src/Graphics/FBO.cpp \
 	Src/Graphics/Vulkan3D/R3DSceneBuilder.cpp \
 	Src/Graphics/Vulkan3D/Vulkan2D.cpp \
 	Src/Graphics/Vulkan3D/Vulkan3D.cpp \
@@ -123,18 +113,8 @@ SRC_FILES = \
 	Src/Graphics/Vulkan3D/VulkanRingBuffer.cpp \
 	Src/Graphics/Vulkan3D/VulkanTextureCache.cpp \
 	Src/Pkgs/volk_impl.cpp \
-	Src/Graphics/Render2D.cpp \
-	Src/Graphics/Pro1000Render2D.cpp \
-	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
-	Src/Pro1000/Pro1000.cpp \
-	Src/Pro1000/UART.cpp \
-	Src/Pro1000/8259.cpp \
-	Src/Pro1000/SCANPSC100F.cpp \
-	Src/Pro1000/SCSITCPBridge.cpp \
-	Src/Pro1000/SCSIHostAdapter.cpp \
-	Src/Pro1000/SyntheticSCSIROM.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \
@@ -169,7 +149,6 @@ SRC_FILES = \
 	Src/Inputs/InputTypes.cpp \
 	Src/Inputs/MultiInputSource.cpp \
 	Src/OSD/SDL/SDLInputSystem.cpp \
-	Src/OSD/SDL/Crosshair.cpp \
 	Src/OSD/Outputs.cpp \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
@@ -184,7 +163,7 @@ SRC_FILES = \
 	Src/Pkgs/imgui/imgui.cpp \
 	Src/Pkgs/imgui/imgui_draw.cpp \
 	Src/Pkgs/imgui/imgui_impl_sdl2.cpp \
-	Src/Pkgs/imgui/imgui_impl_opengl3.cpp \
+	Src/Pkgs/imgui/imgui_impl_sdlrenderer2.cpp \
 	Src/Pkgs/imgui/imgui_tables.cpp \
 	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
@@ -195,16 +174,6 @@ SRC_FILES = \
 	Src/Model3/NetBoardLink.cpp \
 	Src/Model3/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
-
-ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
-	# -DSUPERMODEL_OSX not present: we are not compiling for macOS and can
-	# therefore include the legacy renderer
-	SRC_FILES += \
-		Src/Graphics/Legacy3D/Error.cpp \
-		Src/Graphics/Legacy3D/Legacy3D.cpp \
-		Src/Graphics/Legacy3D/Models.cpp \
-		Src/Graphics/Legacy3D/TextureRefs.cpp
-endif
 
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SRC_FILES += \
@@ -230,6 +199,7 @@ endif
 #
 # Sorted-path compile order
 #
+SRC_FILES := $(filter-out $(PLATFORM_EXCLUDED_SRC_FILES),$(SRC_FILES))
 OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
 
 #
@@ -412,7 +382,6 @@ $(OBJ_DIR)/%.o:	%.cpp | $(OBJ_DIR)
 	$(SILENT)$(CXX) $(CXXFLAGS) $< -o $@
 
 # Suppress all warnings for third-party packages that we cannot modify
-$(OBJ_DIR)/glew.o: CFLAGS += -w
 
 $(OBJ_DIR)/%.o:	%.c | $(OBJ_DIR)
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)

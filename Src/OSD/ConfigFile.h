@@ -31,6 +31,7 @@
 
 #include <ctime>
 #include <string>
+#include "Util/NewConfig.h"
 
 #define CONFIG_FILE_BANNER_HEAD \
    ";;\n" \
@@ -117,22 +118,32 @@ inline std::string TimestampedConfigFileComment(const std::string &description)
 }
 
 // Settings of the default configuration file, sans comment block (see
+// Ignore retired renderer settings while preserving all unrelated INI sections.
+inline void ClearRetiredVideoSettings(Util::Config::Node& config)
+{
+   for (auto& node : config) {
+      if (node.HasChildren()) ClearRetiredVideoSettings(node);
+      else {
+         const std::string& key = node.Key();
+         if (key == "New3DEngine" || key == "QuadRendering" || key == "Vulkan3DEngine" ||
+             key == "Metal3DEngine" || key == "Supersampling" || key == "CRTcolors" ||
+             key == "MultiTexture" || key == "VertexShader" || key == "FragmentShader" ||
+             key == "Crosshairs" || key == "CrosshairStyle" || key == "InputUISelectCrosshairs" ||
+             key == "InputUIScreenShot")
+            node.Clear();
+      }
+   }
+}
+
 // DefaultConfigFileContents())
 static const char s_defaultConfigFileSettings[] =
 {
    "[ Global ]\n"
    "\n"
    "; Graphics\n"
-   "New3DEngine = true\n"
-   "QuadRendering = true\n"
    "WideScreen = false\n"
    "Stretch = false\n"
    "WideBackground = false\n"
-   "Supersampling = 1\n"
-   "; CRT-like color adaption: 0=none, 1=ARI/D93 (recommended for all JP developed games),\n"
-   "; 2=PVM_20M2U/D93, 3=BT601_525/D93, 4=BT601_525/D65 (recommended for all US developed games)\n"
-   "; 5=BT601_625/D65 (recommended for all EUR/AUS developed games)\n"
-   "CRTcolors = 0\n"
    "; Upscale filter used for the 2D layers: 0=none/sharp pixels, 1=biquintic,\n"
    "; 2=bilinear, 3=bicubic\n"
    "UpscaleMode = 2\n"
@@ -142,8 +153,8 @@ static const char s_defaultConfigFileSettings[] =
    "RefreshRate = 60.000\n"
    "\n"
    "; Network board\n"
-   "; Network board. PortIn is the TCP server port of Supermodel, also for Pro-1000\n"
-   "; host programs (wnaspi32.dll). AddressOut and PortOut are the next endpoint to\n"
+   "; PortIn is Supermodel's net board TCP server port.\n"
+   "; AddressOut and PortOut are the next endpoint to\n"
    "; connect to when emulating the network board. A ring topology should be formed,\n"
    "; with each Supermodel instance connecting to the next, and the last\n"
    "; connecting back to the first.\n"

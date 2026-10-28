@@ -45,7 +45,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt update
-          sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
+          sudo apt install -y libsdl2-dev libsdl2-net-dev libvulkan-dev
           
       - name: Install Windows build dependencies
         if: startsWith(matrix.os, 'windows')
@@ -60,9 +60,10 @@ jobs:
             mingw64/mingw-w64-x86_64-gcc
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
-            mingw32/mingw-w64-i686-gcc
+            mingw64/mingw-w64-x86_64-vulkan-headers
 
       - name: Install Vulkan headers
+        if: ${{ !startsWith(matrix.os, 'macos') }}
         run: |
           mkdir -p Libraries/Vulkan-Headers
           curl --fail --location --retry 3 https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v1.3.296.tar.gz | tar -xz --strip-components=1 -C Libraries/Vulkan-Headers
@@ -76,8 +77,6 @@ jobs:
           # Find the executable in bin/ directory (bin64/ on Windows)
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ./bin64/supermodel.exe -print-games
-            # The 32-bit ASPI DLL for Real3D Pro-1000 host programs must also be built
-            test -f ./bin32/wnaspi32.dll
           else
             ./bin/supermodel -print-games
           fi
@@ -88,11 +87,6 @@ jobs:
         run: |
           make -f Makefiles/${{ matrix.makefile }} pkg GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
 
-      - name: Verify bundled macOS Vulkan runtime
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          python3 Scripts/Test_MacVulkanPackage.py pkg/supermodel-*.tgz
-          
       - name: Find and upload package
         run: |
           # Find the package file created by Makefile

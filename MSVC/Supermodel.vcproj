@@ -51,7 +51,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\zlib-1.2.4&quot;;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;$(NOINHERIT)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -70,7 +70,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib WbemUuid.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies=" WbemUuid.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x86&quot;"
@@ -131,7 +131,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\zlib-1.2.4&quot;;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;$(NOINHERIT)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -150,7 +150,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib WbemUuid.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies=" WbemUuid.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x64&quot;"
@@ -212,7 +212,7 @@
 				Optimization="3"
 				EnableIntrinsicFunctions="false"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\zlib-1.2.4&quot;;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;$(NOINHERIT)"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -230,7 +230,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib WbemUuid.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies=" WbemUuid.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x86&quot;"
@@ -296,7 +296,7 @@
 				Optimization="3"
 				EnableIntrinsicFunctions="false"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\zlib-1.2.4&quot;;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;$(NOINHERIT)"
 				ExceptionHandling="1"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -315,7 +315,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib WbemUuid.lib dinput8.lib dxguid.lib"
+				AdditionalDependencies=" WbemUuid.lib dinput8.lib dxguid.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x64&quot;"
@@ -375,22 +375,10 @@
 				RelativePath="..\Src\BlockFile.cpp"
 				>
 			</File>
-			<File
-				RelativePath="..\Src\Config.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\Games.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\INIFile.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\ROMLoad.cpp"
-				>
-			</File>
+
+
+
+
 			<Filter
 				Name="CPU"
 				>
@@ -564,22 +552,10 @@
 								/>
 							</FileConfiguration>
 						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Musashi\m68kopac.c"
-							>
-						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Musashi\m68kopdm.c"
-							>
-						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Musashi\m68kopnz.c"
-							>
-						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Musashi\m68kops.c"
-							>
-						</File>
+
+
+
+
 					</Filter>
 					<Filter
 						Name="Turbo68K"
@@ -620,42 +596,7 @@
 								/>
 							</FileConfiguration>
 						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Turbo68K\Turbo68K.asm"
-							>
-							<FileConfiguration
-								Name="Debug|Win32"
-								ExcludedFromBuild="true"
-								>
-								<Tool
-									Name="MASM"
-								/>
-							</FileConfiguration>
-							<FileConfiguration
-								Name="Debug|x64"
-								ExcludedFromBuild="true"
-								>
-								<Tool
-									Name="MASM"
-								/>
-							</FileConfiguration>
-							<FileConfiguration
-								Name="Release|Win32"
-								ExcludedFromBuild="true"
-								>
-								<Tool
-									Name="MASM"
-								/>
-							</FileConfiguration>
-							<FileConfiguration
-								Name="Release|x64"
-								ExcludedFromBuild="true"
-								>
-								<Tool
-									Name="MASM"
-								/>
-							</FileConfiguration>
-						</File>
+
 					</Filter>
 				</Filter>
 				<Filter
@@ -670,285 +611,22 @@
 			<Filter
 				Name="Graphics"
 				>
-				<File
-					RelativePath="..\Src\Graphics\Error.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Models.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Render2D.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Render3D.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Shader.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\TextureRefs.cpp"
-					>
-				</File>
+
+
+
+
+
+
 				<Filter
 					Name="Shaders"
 					>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Fragment.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Fragment2D.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Fragment_Flat.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Fragment_MultiSheet.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Fragment_NoSpotlight.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Vertex.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Graphics\Shaders\Vertex2D.glsl"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCustomBuildTool"
-							/>
-						</FileConfiguration>
-					</File>
+
+
+
+
+
+
+
 				</Filter>
 			</Filter>
 			<Filter
@@ -966,10 +644,7 @@
 					RelativePath="..\Src\Model3\93C46.cpp"
 					>
 				</File>
-				<File
-					RelativePath="..\Src\Model3\DriveBoard.cpp"
-					>
-				</File>
+
 				<File
 					RelativePath="..\Src\Model3\DSB.cpp"
 					>
@@ -1050,26 +725,7 @@
 			<Filter
 				Name="Pkgs"
 				>
-				<File
-					RelativePath="..\Src\Pkgs\glew.c"
-					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ExceptionHandling="0"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ExceptionHandling="0"
-						/>
-					</FileConfiguration>
-				</File>
+
 				<File
 					RelativePath="..\Src\Pkgs\ioapi.c"
 					>
@@ -1189,402 +845,17 @@
 				<Filter
 					Name="MPEG"
 					>
-					<File
-						RelativePath="..\Src\Sound\MPEG\audio.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\dump.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\getbits.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\getdata.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\huffman.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\layer2.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\layer3.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\misc2.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\position.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\transform.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\util.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|x64"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								ObjectFile="$(IntDir)\amp_$(InputName).obj"
-							/>
-						</FileConfiguration>
-					</File>
+
+
+
+
+
+
+
+
+
+
+
 				</Filter>
 			</Filter>
 			<Filter
@@ -1622,10 +893,7 @@
 					RelativePath="..\Src\Debugger\Interrupt.cpp"
 					>
 				</File>
-				<File
-					RelativePath="..\Src\Debugger\IO.cpp"
-					>
-				</File>
+
 				<File
 					RelativePath="..\Src\Debugger\Label.cpp"
 					>
@@ -1889,22 +1157,10 @@
 				RelativePath="..\Src\BlockFile.h"
 				>
 			</File>
-			<File
-				RelativePath="..\Src\Config.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\Games.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\INIFile.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Src\ROMLoad.h"
-				>
-			</File>
+
+
+
+
 			<File
 				RelativePath="..\Src\Supermodel.h"
 				>
@@ -1962,10 +1218,7 @@
 							RelativePath="..\Src\CPU\68K\Musashi\m68kcpu.h"
 							>
 						</File>
-						<File
-							RelativePath="..\Src\CPU\68K\Musashi\m68kops.h"
-							>
-						</File>
+
 					</Filter>
 				</Filter>
 				<Filter
@@ -1980,34 +1233,13 @@
 			<Filter
 				Name="Graphics"
 				>
-				<File
-					RelativePath="..\Src\Graphics\Render.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Render2D.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Render3D.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Shader.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Shaders2D.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\Shaders3D.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Graphics\TextureRefs.h"
-					>
-				</File>
+
+
+
+
+
+
+
 			</Filter>
 			<Filter
 				Name="Model3"
@@ -2020,10 +1252,7 @@
 					RelativePath="..\Src\Model3\93C46.h"
 					>
 				</File>
-				<File
-					RelativePath="..\Src\Model3\DriveBoard.h"
-					>
-				</File>
+
 				<File
 					RelativePath="..\Src\Model3\DSB.h"
 					>
@@ -2087,10 +1316,7 @@
 				<Filter
 					Name="SDL"
 					>
-					<File
-						RelativePath="..\Src\OSD\SDL\OSDConfig.h"
-						>
-					</File>
+
 					<File
 						RelativePath="..\Src\OSD\SDL\SDLInputSystem.h"
 						>
@@ -2120,14 +1346,8 @@
 			<Filter
 				Name="Pkgs"
 				>
-				<File
-					RelativePath="..\Src\Pkgs\glew.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Src\Pkgs\glxew.h"
-					>
-				</File>
+
+
 				<File
 					RelativePath="..\Src\Pkgs\ioapi.h"
 					>
@@ -2136,10 +1356,7 @@
 					RelativePath="..\Src\Pkgs\unzip.h"
 					>
 				</File>
-				<File
-					RelativePath="..\Src\Pkgs\wglew.h"
-					>
-				</File>
+
 			</Filter>
 			<Filter
 				Name="Inputs"
@@ -2183,70 +1400,22 @@
 				<Filter
 					Name="MPEG"
 					>
-					<File
-						RelativePath="..\Src\Sound\MPEG\amp.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\audio.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\config.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\dump.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\formats.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\getbits.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\getdata.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\huffman.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\layer2.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\layer3.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\misc2.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\MPEG.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\position.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\proto.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\rtbuf.h"
-						>
-					</File>
-					<File
-						RelativePath="..\Src\Sound\MPEG\transform.h"
-						>
-					</File>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 				</Filter>
 			</Filter>
 			<Filter
@@ -2284,10 +1453,7 @@
 					RelativePath="..\Src\Debugger\Interrupt.h"
 					>
 				</File>
-				<File
-					RelativePath="..\Src\Debugger\IO.h"
-					>
-				</File>
+
 				<File
 					RelativePath="..\Src\Debugger\Label.h"
 					>

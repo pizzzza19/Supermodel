@@ -3,7 +3,7 @@
 
 ## Overview
 
-**Supermodel** emulates Sega's Model 3 arcade platform, allowing you to relive state-of-the-art 3D arcade gaming as it existed from 1996 through 1999. It uses OpenGL, [SDL2](https://libsdl.org), and can run on Windows, Linux, and macOS. It also supports network play on low-latency network connections. The source code is freely available under the terms of the [GNU General Public License](http://www.gnu.org/copyleft/gpl.html).
+**Supermodel** emulates Sega's Model 3 arcade platform, allowing you to relive state-of-the-art 3D arcade gaming as it existed from 1996 through 1999. It uses Metal on macOS, Vulkan on Windows/Linux, and [SDL2](https://libsdl.org). It also supports network play on low-latency network connections. The source code is freely available under the terms of the [GNU General Public License](http://www.gnu.org/copyleft/gpl.html).
 
 <p align="center">
   <img src="Docs/Images/Daytona2_1.gif" width="375" height="250" /> <img src="Docs/Images/LAMachin.gif" width="375" height="250" />
@@ -109,3 +109,15 @@ If you try and run a macOS binary that was downloaded from the internet and/or b
 * Close the terminal window that opens (after clicking open)
 
 Details: https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac
+
+## Renderer configuration
+
+This source snapshot uses Metal on macOS and Vulkan on Windows/Linux. The
+renderer is selected by the build; no renderer switch is needed in the INI.
+OpenGL (New3D and Legacy3D), Quad Rendering and Pro-1000 support have been removed.
+The model formats and math in `Src/Graphics/New3D/` are shared decoder code.
+
+The launcher uses SDL_Renderer: Metal on macOS, Direct3D on Windows, and software
+rendering on Linux, with a software fallback on macOS/Windows. It never selects
+an OpenGL driver. Game rendering is separate and uses the native backend above.
+See `Docs/Metal.md` and `Docs/Vulkan.md` for build requirements and limits.

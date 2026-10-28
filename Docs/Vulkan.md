@@ -1,29 +1,19 @@
-# Optional Vulkan renderer
+# Vulkan renderer (Windows/Linux)
 
-The default renderer is still OpenGL. To use Vulkan for Model 3 games, add this
-to the existing `Supermodel.ini` and restart the emulator:
+Vulkan is the only Windows/Linux game renderer. macOS uses Metal. The platform
+build selects the renderer automatically; no INI switch is needed. OpenGL,
+Quad Rendering and Pro-1000 support have been removed.
 
-```ini
-[Global]
-Vulkan3DEngine = true
-```
+The launcher and input configuration remain available without OpenGL. The
+launcher uses SDL_Renderer with Direct3D on Windows (software fallback) and
+software rendering on Linux. This is separate from Vulkan game rendering.
 
-`false`, or omitting the setting, uses the original OpenGL renderer and honors
-`New3DEngine` as before. Game-specific INI sections can override the setting.
-The original launcher and input UI are retained. Pro-1000 uses OpenGL.
+This port includes Vulkan 2D/3D rendering and presentation. Post-processing/CRT
+filters, supersampling, screenshots and gun crosshair overlays are unavailable.
+Lightgun input remains available. Initialization failures are reported in the log;
+a compatible GPU/driver is required because there is no fallback game renderer.
 
-The launcher's Video tab offers mutually exclusive `OpenGL (4.1)` and `Vulkan`
-checkboxes. Selecting OpenGL saves `New3DEngine = true` and
-`Vulkan3DEngine = false`; selecting Vulkan saves the opposite values. One choice
-stays selected. Legacy OpenGL remains available through manual INI configuration.
-
-This port includes the Vulkan 2D/3D rendering and presentation path only.
-Vulkan does not provide post-processing filters, OpenGL supersampling/CRT colors,
-screenshots, or the OpenGL bitmap gun crosshair. Lightgun input is unchanged.
-OpenGL retains its existing features. Vulkan initialization failures are reported
-in the log; set `Vulkan3DEngine = false` to use OpenGL again.
-
-The 2D tile layers keep their native 496x384 resolution, as in OpenGL. The existing
+The 2D tile layers keep their native 496x384 resolution. The existing
 `UpscaleMode` setting applies in Vulkan too: 0 nearest, 1 biquintic, 2 bilinear
 (default), 3 bicubic. The 3D scene renders at the output resolution and does not
 receive the tile upscale filter. This is separate from post-processing effects.
@@ -33,8 +23,7 @@ default. They add CPU work and synchronous file logging on the rendering thread.
 For investigations only, set `VulkanDiagnostics = true` in the INI to enable them.
 
 The Vulkan path requires a compatible GPU and driver (Vulkan 1.3, or the backend's
-supported Vulkan 1.2 extension path). The Vulkan loader is loaded dynamically;
-OpenGL sessions do not initialize it.
+supported Vulkan 1.2 extension path). The Vulkan loader is loaded dynamically; no Vulkan import library is required.
 
 ## Building
 

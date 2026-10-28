@@ -111,9 +111,9 @@ public:
     return m_game;
   }
 
-  void AttachRenderers(IRender2D *render2D, IRender3D *render3D, SuperAA* superAA) override
+  void AttachRenderers(IRender2D *render2D, IRender3D *render3D) override
   {
-    m_tileGen.AttachRenderer(dynamic_cast<CRender2D *>(render2D));
+    m_tileGen.AttachRenderer(render2D);
     render3D->SetStepping(m_game.stepping);
     m_real3D.AttachRenderer(render3D);
   }

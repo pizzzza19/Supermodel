@@ -2212,8 +2212,6 @@ void CModel3::RenderFrame(void)
     TileGen.RenderFrameTop();
     GPU.EndFrame();
     TileGen.EndFrame();
-    if (m_superAA)
-      m_superAA->Draw();
   }
 
   EndFrameVideo();
@@ -3005,12 +3003,11 @@ const Game &CModel3::GetGame() const
   return m_game;
 }
 
-void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
+void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr)
 {
   TileGen.AttachRenderer(Render2DPtr);
   Render3DPtr->SetStepping(m_stepping);
   GPU.AttachRenderer(Render3DPtr);
-  m_superAA = superAA;
 }
 
 constexpr static int RAM_SIZE			= 0x800000;		//8MB
@@ -3341,7 +3338,6 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
     GPU(config),
     SoundBoard(config),
     m_jtag(GPU),
-    m_superAA(nullptr),
     m_server(std::move(server))
 {
   // Initialize pointers so dtor can know whether to free them

@@ -163,9 +163,9 @@ struct Mesh
 	// fog
 	float fogIntensity = 1.0f;
 
-	// opengl resources
+	// GPU vertex range
 	int vboOffset		= 0;			// this will be calculated later
-	int vertexCount		= 0;			// /3 for triangles /4 for quads
+	int vertexCount		= 0;			// triangle-list vertex count
 };
 
 struct SortingMesh : public Mesh		// This struct temporarily holds the model data, before it gets copied to the main buffer
@@ -222,7 +222,7 @@ struct Viewport
 	float	fogAmbient;
 	float	scrollFog;				// a transparency value that determines if fog is blended over the bottom 2D layer
 	int		losPosX, losPosY;		// line of sight position
-	int		x, y;					// viewport coordinates (scaled and in OpenGL format)
+	int		x, y;					// viewport coordinates (scaled and with a bottom-left origin)
 	int		width, height;			// viewport dimensions (scaled for display surface size)
 	int		priority;				// priority
 	int		select;					// viewport select?
