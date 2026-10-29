@@ -588,11 +588,6 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     return true;
 }
 
-bool ImGui_ImplSDL2_InitForOpenGL(SDL_Window* window, void* sdl_gl_context)
-{
-    return ImGui_ImplSDL2_Init(window, nullptr, sdl_gl_context);
-}
-
 bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window)
 {
 #if !SDL_HAS_VULKAN
@@ -860,7 +855,7 @@ static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, 
         SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
 #endif
     else
-        SDL_GL_GetDrawableSize(window, &display_w, &display_h);
+        SDL_GetWindowSize(window, &display_w, &display_h);
     if (out_size != nullptr)
         *out_size = ImVec2((float)w, (float)h);
     if (out_framebuffer_scale != nullptr)

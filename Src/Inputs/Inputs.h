@@ -98,11 +98,9 @@ public:
   std::shared_ptr<CSwitchInput> uiSoundVolUp;
   std::shared_ptr<CSwitchInput> uiSoundVolDown;
   std::shared_ptr<CSwitchInput> uiClearNVRAM;
-  std::shared_ptr<CSwitchInput> uiSelectCrosshairs;
   std::shared_ptr<CSwitchInput> uiToggleFrLimit;
   std::shared_ptr<CSwitchInput> uiDumpInpState;
   std::shared_ptr<CSwitchInput> uiDumpTimings;
-  std::shared_ptr<CSwitchInput> uiScreenshot;
 #ifdef SUPERMODEL_DEBUGGER
   std::shared_ptr<CSwitchInput> uiEnterDebugger;
 #endif

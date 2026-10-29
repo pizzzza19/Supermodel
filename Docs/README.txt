@@ -20,8 +20,8 @@
   Introduction
 ================
 
-Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
-SDL, and can run on Windows, Linux, and Mac OS X.  Development began in January
+Supermodel emulates the Sega Model 3 arcade platform using SDL2, Metal on
+macOS and Vulkan on Windows/Linux.  Development began in January
 of 2011 and continues to focus on reverse engineering all aspects of the Model
 3 arcade platform.
 
@@ -96,10 +96,6 @@ directories should be created:
                             source code repository.
     Assets/                 Directory containing multimedia assets required by
                             Supermodel.
-    Assets/p1crosshair.bmp  Bitmap crosshair image for player 1, used when bit-
-                            mapped crosshairs are enabled
-                            ('--crosshair-style=bmp').
-    Assets/p2crosshair.bmp  Bitmap crosshair image for player 2.
     Config/                 Directory where required configuration files are
                             stored.
     Config/Supermodel.ini   Configuration file containing default input
@@ -110,8 +106,8 @@ directories should be created:
                             for placing ROM sets.
     Saves/                  Directory where save states will be saved.
 
-Supermodel requires OpenGL 2.1 and a substantial amount of both video and system
-memory.  A modern 64-bit CPU and a mid range GPU are the minimum recommendations
+Supermodel requires a Metal-capable GPU on macOS or a compatible Vulkan GPU
+on Windows/Linux, plus sufficient video and system memory.  A modern 64-bit CPU and a mid range GPU are the minimum recommendations
 to achieve consistent frame rates of 60 FPS.
 
 
@@ -342,7 +338,6 @@ are listed below.
     Pause                                   Alt-P
     Reset                                   Alt-R
     Clear NVRAM                             Alt-N
-    Crosshairs (for light gun games)        Alt-I
     Toggle 60 Hz Frame Limiting             Alt-T
     Save State                              F5
     Load State                              F7
@@ -466,9 +461,8 @@ off-screen.  To reload, hold down this button and then, while holding it, press
 the trigger.  For easier reloading, the 'InputAutoTrigger' setting can be
 enabled in the configuration file (described elsewhere in this manual).
 
-Crosshairs will be visible in full screen mode and can also be enabled in
-windowed modes.  Use Alt-I to cycle through different crosshair options (enable
-for a single player, both, or none).
+Crosshair overlays are not implemented in the native renderers. Lightgun input
+is still supported.
 
 For multiple mouse support, allowing two mice or PC light guns to be mapped,
 Raw Input must be used.  This is supported only on Windows and is described
@@ -1224,36 +1218,11 @@ not.  All options are case sensitive.
 
     ----------------
 
-    Option:         -print-gl-info
-
-    Description:    Prints OpenGL driver information and quits.
-
-    ----------------
-
     Option:         -res=<x>,<y>
 
     Description:    Resolution of the display in pixels, with <x> being width
                     and <y> being height.  The default is 496x384, the Model
                     3's native resolution.
-
-    ----------------
-
-    Option:         -crtcolors=<mode>
-
-    Description:    Emulates other regional TV standards of the time.
-                    These came with the caveat that displaying video content on
-                    other regions TVs would/should have needed color corrections
-                    (which was usually not done for video games, only broadcasting, etc).
-                    Nowadays the world has settled on the same standards, and we
-                    can transform from the old ones to the (for now) common sRGB.
-
-                    This means one can choose between 6 different mappings now:
-                    0=none (default)
-                    1=ARI/D93 (recommended for all JP developed games, most likely true for all Model 3 games)
-                    2=PVM_20M2U/D93
-                    3=BT601_525/D93
-                    4=BT601_525/D65 (recommended for all US developed games)
-                    5=BT601_625/D65 (recommended for all EUR/AUS developed games)
 
     ----------------
 
@@ -1273,19 +1242,6 @@ not.  All options are case sensitive.
     Option:         -show-fps
 
     Description:    Shows the frame rate in the window title bar.
-
-    ----------------
-
-    Option:         -frag-shader=<file>
-                    -vert-shader=<file>
-
-    Description:    Allows external fragment and vertex shaders to be used for
-                    3D rendering.  <file> is the file path.  Files should be
-                    ASCII text files containing GLSL source code.  The file
-                    extension is not important.  By default, Supermodel's
-                    internal shader programs are used.  These options are
-                    intended for future extensibility and for use by
-                    developers.
 
     ----------------
 
@@ -1436,18 +1392,6 @@ All settings are case sensitive.
     Description:    Resolution of the display in pixels.  The default is
                     496x384, the Model 3's native resolution.  Equivalent to
                     the '-res' command line option.
-
-    ----------------
-
-    Name:           FragmentShader
-                    VertexShader
-
-    Argument:       String.
-
-    Description:    Path to the external fragment or vertex shader file to use
-                    for 3D  rendering.  By default, these are not set and the
-                    internal default shaders are used.  These are equivalent to
-                    the '-frag-shader' and '-vert-shader' command line options.
 
     ----------------
 
@@ -1990,9 +1934,13 @@ All settings are case sensitive.
   13. Compiling the Source Code
 =================================
 
-First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
-(http://zlib.net) are installed. GLEW (http://glew.sourceforge.net) is
-included in the source tree and does not need to be installed separately.
+Install SDL2, SDL2_net and zlib. Windows/Linux also need Vulkan headers and a
+compatible Vulkan GPU/driver. macOS needs Xcode Command Line Tools and Metal.
+See Metal.md and Vulkan.md for current build instructions. OpenGL and GLEW are
+not required. Use Makefiles/Makefile.OSX, Makefile.UNIX, Makefile.Win32, or the
+current MSVC/Supermodel.vcxproj; the old Visual C++ 2008 project is obsolete.
+
+Historical build notes (use the current instructions above):
 
 Next, extract the Supermodel source code and copy the appropriate Makefile
 from the Makefiles/ directory to the base directory (that is, the one above

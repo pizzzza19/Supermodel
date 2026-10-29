@@ -188,18 +188,6 @@
     <ClCompile Include="..\Src\CPU\68K\Musashi\m68kdasm.c">
       <Filter>Source Files\CPU\68K\Musashi</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopac.c">
-      <Filter>Source Files\CPU\68K\Musashi</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopdm.c">
-      <Filter>Source Files\CPU\68K\Musashi</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopnz.c">
-      <Filter>Source Files\CPU\68K\Musashi</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kops.c">
-      <Filter>Source Files\CPU\68K\Musashi</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\CPU\68K\Turbo68K\Make68K.c">
       <Filter>Source Files\CPU\68K\Turbo68K</Filter>
     </ClCompile>
@@ -223,27 +211,6 @@
     </ClCompile>
     <ClCompile Include="..\Src\Model3\Model3.cpp">
       <Filter>Source Files\Model3</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\Pro1000.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\UART.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\8259.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\SCANPSC100F.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\SCSITCPBridge.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\SCSIHostAdapter.cpp">
-      <Filter>Source Files\Pro1000</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pro1000\SyntheticSCSIROM.cpp">
-      <Filter>Source Files\Pro1000</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\MPC10x.cpp">
       <Filter>Source Files\Model3</Filter>
@@ -286,9 +253,6 @@
     </ClCompile>
     <ClCompile Include="..\Src\OSD\Windows\FileSystemPath.cpp">
       <Filter>Source Files\OSD\Windows</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Pkgs\glew.c">
-      <Filter>Source Files\Pkgs</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Pkgs\ioapi.c">
       <Filter>Source Files\Pkgs</Filter>
@@ -374,43 +338,13 @@
     <ClCompile Include="..\Src\Debugger\CPU\Z80Debug.cpp">
       <Filter>Source Files\Debugger\CPU</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Render2D.cpp">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Pro1000Render2D.cpp">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Shader.cpp">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp">
-      <Filter>Source Files\Graphics\Legacy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp">
-      <Filter>Source Files\Graphics\Legacy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp">
-      <Filter>Source Files\Graphics\Legacy</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp">
-      <Filter>Source Files\Graphics\Legacy</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\Model.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp">
@@ -433,9 +367,6 @@
     </ClCompile>
     <ClCompile Include="..\Src\OSD\Logger.cpp">
       <Filter>Source Files\OSD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\R3DScrollFog.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Util\NewConfig.cpp">
       <Filter>Source Files\Util</Filter>
@@ -464,12 +395,6 @@
     <ClCompile Include="..\Src\Debugger\DebuggerIO.cpp">
       <Filter>Source Files\Debugger</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\R3DFrameBuffers.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\GLSLShader.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Sound\MPEG\MpegAudio.cpp">
       <Filter>Source Files\Sound\MPEG</Filter>
     </ClCompile>
@@ -497,18 +422,6 @@
     <ClCompile Include="..\Src\Model3\SimNetBoard.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp">
-      <Filter>Source Files\OSD\SDL</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\FBO.cpp">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\SuperAA.cpp">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Pkgs\imgui\imgui.cpp">
       <Filter>Source Files\Pkgs\imgui</Filter>
     </ClCompile>
@@ -527,7 +440,7 @@
     <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_sdl2.cpp">
       <Filter>Source Files\Pkgs\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_opengl3.cpp">
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_sdlrenderer2.cpp">
       <Filter>Source Files\Pkgs\imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\OSD\SDL\NetOutputs.cpp">
@@ -543,27 +456,6 @@
     </MASM>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_Flat.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_MultiSheet.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_NoSpotlight.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment2D.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
-    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex2D.glsl">
-      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\Docs\LICENSE.txt">
@@ -610,9 +502,6 @@
     <ClInclude Include="..\Src\CPU\68K\Musashi\m68kcpu.h">
       <Filter>Header Files\CPU\68K\Musashi</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kops.h">
-      <Filter>Header Files\CPU\68K\Musashi</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\CPU\Z80\Z80.h">
       <Filter>Header Files\CPU\Z80</Filter>
     </ClInclude>
@@ -633,30 +522,6 @@
     </ClInclude>
     <ClInclude Include="..\Src\Model3\Model3.h">
       <Filter>Header Files\Model3</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\Pro1000.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\UART.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\8259.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\SCANPSC100F.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\SCSITCPBridge.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\SCSITCPBridgeProtocol.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\SCSIHostAdapter.h">
-      <Filter>Header Files\Pro1000</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pro1000\SyntheticSCSIROM.h">
-      <Filter>Header Files\Pro1000</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\MPC10x.h">
       <Filter>Header Files\Model3</Filter>
@@ -694,9 +559,6 @@
     <ClInclude Include="..\Src\OSD\Video.h">
       <Filter>Header Files\OSD</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\OSD\SDL\OSDConfig.h">
-      <Filter>Header Files\OSD\SDL</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\OSD\SDL\SDLInputSystem.h">
       <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
@@ -712,19 +574,10 @@
     <ClInclude Include="..\Src\OSD\SDL\NetOutputs.h">
       <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Pkgs\glew.h">
-      <Filter>Header Files\Pkgs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pkgs\glxew.h">
-      <Filter>Header Files\Pkgs</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Pkgs\ioapi.h">
       <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pkgs\unzip.h">
-      <Filter>Header Files\Pkgs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pkgs\wglew.h">
       <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Inputs\Input.h">
@@ -883,40 +736,13 @@
     <ClInclude Include="..\Src\Graphics\IRender3D.h">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Render2D.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Pro1000Render2D.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Graphics\IRender2D.h">
       <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Shader.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Shaders2D.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h">
-      <Filter>Header Files\Graphics\Legacy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h">
-      <Filter>Header Files\Graphics\Legacy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h">
-      <Filter>Header Files\Graphics\Legacy</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\GLSLShader.h">
-      <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Mat4.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Model.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\New3D.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Plane.h">
@@ -931,46 +757,16 @@
     <ClInclude Include="..\Src\Graphics\New3D\R3DFloat.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderQuads.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\VBO.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Util\BitCast.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\OSD\SDL\Crosshair.h">
+    <ClInclude Include="..\Src\OSD\SDL\Gui.h">
       <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Graphics\FBO.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\SuperAA.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\OSD\SDL\Gui.h">
+    <ClInclude Include="..\Src\OSD\SDL\GuiRenderer.h">
       <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pkgs\imgui\imconfig.h">
@@ -982,6 +778,9 @@
     <ClInclude Include="..\Src\Pkgs\imgui\imgui_impl_sdl2.h">
       <Filter>Header Files\Pkgs\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imgui_impl_sdlrenderer2.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
     <ClInclude Include="..\Src\Pkgs\imgui\imstb_rectpack.h">
       <Filter>Header Files\Pkgs\imgui</Filter>
     </ClInclude>
@@ -989,9 +788,6 @@
       <Filter>Header Files\Pkgs\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pkgs\imgui\imstb_truetype.h">
-      <Filter>Header Files\Pkgs\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Pkgs\imgui\imgui_impl_opengl3_loader.h">
       <Filter>Header Files\Pkgs\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\SDL\Main.h">

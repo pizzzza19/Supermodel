@@ -38,7 +38,7 @@ DELETE = rm -d -r -f
 ###############################################################################
 
 PKG_TYPE = tgz
-PKG_FILES = Frameworks/*.framework Frameworks/libMoltenVK.dylib Frameworks/MoltenVK-LICENSE.txt Frameworks/MoltenVK-NOTICE.txt
+PKG_FILES = Frameworks/*.framework
 
 
 ###############################################################################
@@ -64,16 +64,15 @@ LD = clang
 #
 
 SDL_CFLAGS =
-SDL_LIBS = -framework SDL2 -framework SDL2_net -framework OpenGL -framework GLUT -framework Cocoa
+SDL_LIBS = -framework SDL2 -framework SDL2_net -framework Cocoa
 
 #
 # macOS-specific
 #
 
-PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX
-PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
-MOLTENVK_DIR = Libraries/MoltenVK-1.4.2
-PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework Frameworks/libMoltenVK.dylib Frameworks/MoltenVK-LICENSE.txt Frameworks/MoltenVK-NOTICE.txt
+PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX -DSUPERMODEL_METAL -mmacosx-version-min=10.15
+PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -framework Metal -framework QuartzCore -mmacosx-version-min=10.15 -lz -lm -lc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
+PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
 PLATFORM_BINARY_EXTENSION =
 
 #
@@ -96,13 +95,36 @@ endif
 ###############################################################################
 
 PLATFORM_SRC_FILES = \
-	Src/OSD/OSX/FileSystemPath.cpp
+	Src/OSD/OSX/FileSystemPath.cpp \
+	Src/Graphics/Metal3D/MetalRenderer.mm
+
+# macOS uses Metal; keep only the GPU-independent scene decoder from Vulkan3D.
+PLATFORM_EXCLUDED_SRC_FILES = Src/Graphics/Vulkan3D/Vulkan%.cpp Src/Pkgs/volk_impl.cpp
 
 include Makefiles/Rules.inc
-INCLUDE_DIRS += $(MOLTENVK_DIR)/include
 
 # -s (strip) is obsolete and ignored by Apple ld64; remove it to avoid potential warnings
 LDOPT := $(filter-out -s,$(LDOPT))
+
+# The native backend uses ARC. Its embedded Metal source is compiled by the
+# system Metal compiler at startup; no shader tools are needed for normal builds.
+$(OBJ_DIR)/%.o: %.mm | $(OBJ_DIR)
+	$(SILENT)$(CXX) -MM -MP -MT $@ -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS_GENERATE_DEPENDENCIES) -fobjc-arc $< > $(OBJ_DIR)/$(*F).d
+	$(SILENT)$(CXX) $(CXXFLAGS) -fobjc-arc $< -o $@
+
+.PHONY: test-metal
+METAL_TEST_OBJECTS = MetalRenderer R3DSceneBuilder Mat4 Model PolyHeader R3DFloat Vec NewConfig Format
+$(BIN_DIR)/Test_MetalRenderer: Scripts/Test_MetalRenderer.cpp $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(METAL_TEST_OBJECTS))) | $(BIN_DIR)
+	$(SILENT)$(CXX) $(filter-out -c,$(CXXFLAGS)) $< $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(METAL_TEST_OBJECTS))) $(PLATFORM_LDFLAGS) -o $@
+test-metal: $(BIN_DIR)/Test_MetalRenderer
+	MTL_DEBUG_LAYER=1 ./$(BIN_DIR)/Test_MetalRenderer
+
+.PHONY: test-launcher
+LAUNCHER_TEST_OBJECTS = imgui imgui_draw imgui_tables imgui_widgets imgui_impl_sdlrenderer2
+$(BIN_DIR)/Test_LauncherScale: Scripts/Test_LauncherScale.cpp Src/OSD/SDL/GuiRenderer.h $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(LAUNCHER_TEST_OBJECTS))) | $(BIN_DIR)
+	$(SILENT)$(CXX) $(filter-out -c,$(CXXFLAGS)) $< $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(LAUNCHER_TEST_OBJECTS))) $(PLATFORM_LDFLAGS) -o $@
+test-launcher: $(BIN_DIR)/Test_LauncherScale
+	./$(BIN_DIR)/Test_LauncherScale
 
 clean:
 	$(SILENT)echo Cleaning up \"Frameworks\", \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
@@ -122,18 +144,6 @@ clean:
 Frameworks:
 	$(info Creating directory     : $@)
 	$(SILENT)mkdir Frameworks
-
-$(MOLTENVK_DIR)/.complete: Libraries/Get_MoltenVK.sh
-	$(SILENT)sh Libraries/Get_MoltenVK.sh
-
-Frameworks/libMoltenVK.dylib: $(MOLTENVK_DIR)/.complete | Frameworks
-	$(SILENT)cp $(MOLTENVK_DIR)/libMoltenVK.dylib $@
-
-Frameworks/MoltenVK-LICENSE.txt: $(MOLTENVK_DIR)/.complete | Frameworks
-	$(SILENT)cp $(MOLTENVK_DIR)/LICENSE $@
-
-Frameworks/MoltenVK-NOTICE.txt: $(MOLTENVK_DIR)/.complete | Frameworks
-	$(SILENT)cp $(MOLTENVK_DIR)/NOTICE.txt $@
 
 Frameworks/SDL2.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)

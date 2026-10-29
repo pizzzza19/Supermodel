@@ -147,8 +147,7 @@ Result CVulkanContext::InitDevice(SDL_Window* window, bool validation, bool vsyn
 	if (!Rendering2EntryPointsAvailable())
 	{
 		ErrorLog("Vulkan: the device was accepted but none of dynamic rendering or synchronization2 was "
-			"loaded; this driver cannot run the backend. The OpenGL renderer (New 3D or Legacy 3D) can be "
-			"chosen on the Video tab.");
+			"loaded; this driver cannot run the backend. Update the GPU driver or use a supported GPU.");
 		return Result::FAIL;
 	}
 
@@ -273,7 +272,7 @@ bool CVulkanContext::CreateInstance()
 		 * the shader rather than at the real problem. Reporting the requirement plainly is more useful.
 		 */
 		ErrorLog("Vulkan: vkCreateInstance failed (%d) for a Vulkan 1.3 instance. This backend requires a "
-			"Vulkan 1.3 driver; the OpenGL renderer (New 3D or Legacy 3D) can be chosen on the Video tab.",
+			"Vulkan 1.3 driver. Update the GPU driver or use a supported GPU.",
 			(int)result);
 		return false;
 	}
@@ -457,8 +456,7 @@ bool CVulkanContext::PickDevice()
 	{
 		ErrorLog("Vulkan: no device offers a usable API version (Vulkan 1.3, or 1.2 with dynamic "
 			"rendering and synchronization2) together with graphics, present and 256-byte push constants. "
-			"The OpenGL renderer (New 3D or Legacy 3D) can be chosen on the Video tab; a driver update "
-			"may also help.");
+			"Update the GPU driver or use a supported GPU.");
 		return false;
 	}
 	return true;

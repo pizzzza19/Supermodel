@@ -1,5 +1,4 @@
 #include "SDLIncludes.h"
-#include <GL/glew.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -18,7 +17,7 @@
 #include "GameLoader.h"
 #include "../Pkgs/imgui/imgui.h"
 #include "../Pkgs/imgui/imgui_impl_sdl2.h"
-#include "../Pkgs/imgui/imgui_impl_opengl3.h"
+#include "../Pkgs/imgui/imgui_impl_sdlrenderer2.h"
 #include "../Src/Util/NewConfig.h"
 #include "Util/ConfigBuilders.h"
 #include "../Src/OSD/SDL/SDLInputSystem.h"
@@ -26,6 +25,7 @@
 #include "OSD/ConfigFile.h"
 #include "Main.h"
 #include "Gui.h"
+#include "GuiRenderer.h"
 
 #ifdef _WIN32
     #include "../Src/OSD/Windows/DirectInputSystem.h"
@@ -446,21 +446,37 @@ static void StorePerGameSettings(PerGameState& pg, Util::Config::Node& fullConfi
     }
 }
 
-static void CreateRendererControls(Util::Config::Node& config)
+static void CreateRendererControls(Util::Config::Node&)
 {
-    auto& vulkan = std::get<bool>(config.Get("Vulkan3DEngine").GetValue()->GetValueRange()->tempValue);
-    auto& new3d = std::get<bool>(config.Get("New3DEngine").GetValue()->GetValueRange()->tempValue);
+#ifdef SUPERMODEL_METAL
+    ImGui::TextUnformatted("Renderer: Metal");
+#else
+    ImGui::TextUnformatted("Renderer: Vulkan");
+#endif
+}
 
-    // These checkboxes select one backend. Clicking the active choice keeps it selected.
-    bool openGLChecked = !vulkan;
-    if (ImGui::Checkbox("OpenGL (4.1)", &openGLChecked) && openGLChecked) {
-        vulkan = false;
+// Choose a driver explicitly so SDL cannot fall back to an OpenGL renderer.
+static SDL_Renderer* CreateLauncherRenderer(SDL_Window* window)
+{
+#ifdef SUPERMODEL_METAL
+    const char* preferred[] = { "metal", "software" };
+#elif defined(_WIN32)
+    const char* preferred[] = { "direct3d11", "direct3d", "software" };
+#else
+    const char* preferred[] = { "software" };
+#endif
+    for (const char* name : preferred) {
+        for (int i = 0; i < SDL_GetNumRenderDrivers(); ++i) {
+            SDL_RendererInfo info{};
+            if (SDL_GetRenderDriverInfo(i, &info) != 0 || std::string(info.name) != name) continue;
+            const Uint32 flags = std::string(name) == "software" ? 0 : SDL_RENDERER_PRESENTVSYNC;
+            if (SDL_Renderer* renderer = SDL_CreateRenderer(window, i, flags)) {
+                SDL_Log("Launcher renderer: %s", name);
+                return renderer;
+            }
+        }
     }
-    bool vulkanChecked = vulkan;
-    if (ImGui::Checkbox("Vulkan", &vulkanChecked) && vulkanChecked) {
-        vulkan = true;
-    }
-    new3d = !vulkan;
+    return nullptr;
 }
 
 static void CreateControls(Util::Config::Node& config, const std::string& group)
@@ -470,9 +486,6 @@ static void CreateControls(Util::Config::Node& config, const std::string& group)
         if (it->IsLeaf() && it->Exists()) {
 
             const auto& key = it->Key();
-            if (group == "Video" && (key == "New3DEngine" || key == "Vulkan3DEngine")) {
-                continue; // Drawn together by CreateRendererControls().
-            }
             auto val = it->GetValue();
 
             if (val) {
@@ -883,7 +896,7 @@ static std::shared_ptr<CInputs> GetInputSystem(Util::Config::Node& config, SDL_W
 
         int x, y, w, h;
         SDL_GetWindowPosition(window, &x, &y);
-        SDL_GL_GetDrawableSize(window, &w, &h);
+        SDL_GetWindowSize(window, &w, &h);
 
         inputSystem->SetDisplayGeom(x, y, w, h);
         return inputs;
@@ -1137,12 +1150,12 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame)
+static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, SDL_Renderer* renderer, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
     // Start the Dear ImGui frame
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
@@ -1330,10 +1343,10 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
     // Rendering
     ImGui::Render();
     
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    SDL_SetRenderDrawColor(renderer, Uint8(clear_color.x * 255), Uint8(clear_color.y * 255),
+        Uint8(clear_color.z * 255), Uint8(clear_color.w * 255));
+    SDL_RenderClear(renderer);
+    RenderLauncherDrawData(ImGui::GetDrawData(), renderer);
 }
 
 static std::string GetRomPath(int selectedGame, const std::map<std::string, Game>& games, const std::string& romDirectory)
@@ -1374,6 +1387,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     // section but the game-specific sections are carried along so that they survive
     // being written back out.
     Util::Config::Node fullConfig = fileConfig;
+    ClearRetiredVideoSettings(fullConfig);
 
     // The global section, merged over the defaults, is what the GUI operates on. The
     // merge is also what attaches the value ranges the controls are built from, so it
@@ -1387,16 +1401,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         return {};
     }
 
-    // Set OpenGL attributes
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    // Create window with graphics context
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_INPUT_FOCUS);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
 
     // Create SDL window
     s_uiScale = GetDPIScale();
@@ -1407,17 +1412,13 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         return {};
     }
 
-    // Create OpenGL context
-    SDL_GLContext glContext = SDL_GL_CreateContext(window);
-    if (!glContext) {
-        std::cerr << "OpenGL context could not be created! Error: " << SDL_GetError() << std::endl;
+    SDL_Renderer* renderer = CreateLauncherRenderer(window);
+    if (!renderer) {
+        std::cerr << "Launcher renderer could not be created: " << SDL_GetError() << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
         return {};
     }
-
-    SDL_GL_MakeCurrent(window, glContext);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Setup ImGui context
     IMGUI_CHECKVERSION();
@@ -1440,12 +1441,22 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     style.FontScaleDpi = s_uiScale;
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, glContext);
-    ImGui_ImplOpenGL3_Init("#version 410");
+    if (!ImGui_ImplSDL2_InitForSDLRenderer(window, renderer) || !ImGui_ImplSDLRenderer2_Init(renderer)) {
+        std::cerr << "Launcher UI backend initialization failed" << std::endl;
+        ImGui::DestroyContext();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return {};
+    }
 
     std::string xmlFile = config["GameXMLFile"].ValueAs<std::string>();
     GameLoader loader(xmlFile);
-    auto& games = loader.GetGames();
+    auto games = loader.GetGames();
+    for (auto it = games.begin(); it != games.end();) {
+        if (it->second.platform != Game::PLATFORM_MODEL3) it = games.erase(it);
+        else ++it;
+    }
     std::string scannedRomDirectory = config["ROMDirectory"].ValueAs<std::string>();
     std::set<std::string> ownedZips = ScanRomZips(scannedRomDirectory);
     int selectedGame = -1;  // -1 means no selection
@@ -1489,11 +1500,11 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             selectedGame = -1;
         }
 
-        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen, perGame);
+        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, renderer, inputs, kb, cal, closeRequested, exitPromptOpen, perGame);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-        SDL_GL_SwapWindow(window);
+        SDL_RenderPresent(renderer);
 
         if (exit) {
             break;
@@ -1521,11 +1532,11 @@ exitNoSave:
     inputs = nullptr;
 
     // Cleanup resources
-    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

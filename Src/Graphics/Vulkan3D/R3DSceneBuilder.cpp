@@ -20,7 +20,7 @@
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
 #include "R3DSceneBuilder.h"
-#include "VulkanCommon.h"
+#include "Graphics/R3DShared.h"
 #include "../New3D/PolyHeader.h"
 #include "../New3D/R3DFloat.h"
 #include "../New3D/Vec.h"

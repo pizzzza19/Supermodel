@@ -27,10 +27,9 @@
  *
  * Implementations:
  *
- *  - CRender2D: the Model 3 tile generator layers.
- *  - CPro1000Render2D: the Real3D Pro-1000 scroll layer (one solid color).
+ *  - Metal3D::CMetal2D and Vulkan3D::CVulkan2D: Model 3 tile layers.
  *
- * Tile-generator memory hooks are shared by the OpenGL and Vulkan renderers.
+ * Tile-generator memory hooks are shared by the Metal and Vulkan renderers.
  */
 
 #ifndef INCLUDED_IRENDER2D_H
@@ -50,7 +49,7 @@ public:
    * One-time initialization. Must be called before any other members.
    *
    * Parameters:
-   *    xOffset     X offset of the viewable area within OpenGL display
+   *    xOffset     X offset of the viewable area within the display
    *                surface, in pixels.
    *    yOffset     Y offset.
    *    xRes        Horizontal resolution of the viewable area.

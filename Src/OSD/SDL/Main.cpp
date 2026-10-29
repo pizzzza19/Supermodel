@@ -72,7 +72,6 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <GL/glew.h>
 
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
@@ -88,34 +87,26 @@
 #include "GameLoader.h"
 #include "SDLInputSystem.h"
 #include "SDLIncludes.h"
-#ifdef SUPERMODEL_OSX
-#include <SDL2/SDL_vulkan.h>
-#endif
 #include "Debugger/SupermodelDebugger.h"
-#ifndef SUPERMODEL_OSX
-#include "Graphics/Legacy3D/Legacy3D.h"
-#endif
-#include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
-#include "Pro1000/Pro1000.h"
 #include "Network/NetServer.h"
-#include "Graphics/Pro1000Render2D.h"
 #include "Graphics/IRender2D.h"
-#include "Graphics/Render2D.h"
 #include "OSD/Audio.h"
 #include "OSD/ConsoleInput.h"
-#include "Graphics/New3D/VBO.h"
-#include "Graphics/SuperAA.h"
+#ifndef SUPERMODEL_METAL
+#define SUPERMODEL_VULKAN
 #include "Graphics/Vulkan3D/VulkanContext.h"
 #include "Graphics/Vulkan3D/Vulkan2D.h"
 #include "Graphics/Vulkan3D/Vulkan3D.h"
+#endif
+#ifdef SUPERMODEL_METAL
+#include "Graphics/Metal3D/MetalRenderer.h"
+#endif
 #include "Sound/MPEG/MpegAudio.h"
 
 #include <iostream>
-#include "Util/BMPFile.h"
 
-#include "Crosshair.h"
 #include "OSD/ConfigFile.h"
 #include "Gui.h"
 
@@ -138,96 +129,22 @@ static Util::Config::Node s_runtime_config("Global");
 ******************************************************************************/
 
 SDL_Window *s_window = nullptr;
+#ifdef SUPERMODEL_VULKAN
 static std::unique_ptr<Vulkan3D::CVulkanContext> s_vkContext;
+#endif
+#ifdef SUPERMODEL_METAL
+static std::unique_ptr<Metal3D::CMetalContext> s_metalContext;
+#endif
 
 /*
- * Position and size of rectangular region within OpenGL display to render to.
+ * Position and size of rectangular region within native display to render to.
  * Unlike the config tree, these end up containing the actual resolution (and
  * computed offsets within the viewport) that will be rendered based on what
  * was obtained from SDL.
  */
-static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
-static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
-static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
-static int aaValue = 1;                 // default is 1 which is no aa
-static CRTcolor CRTcolors = CRTcolor::None; // default to no gamma/color adaption being done
-
-/*
- * Crosshair stuff
- */
-static CCrosshair* s_crosshair = nullptr;
-
-static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
-{
-  // What resolution did we actually get?
-  int actualWidth;
-  int actualHeight;
-  SDL_GetWindowSize(s_window, &actualWidth, &actualHeight);
-  *totalXResPtr = actualWidth;
-  *totalYResPtr = actualHeight;
-
-  // If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
-  float xResF = float(*xResPtr);
-  float yResF = float(*yResPtr);
-  if (keepAspectRatio)
-  {
-    float model3Ratio = float(496.0/384.0);
-    if (yResF < (xResF/model3Ratio))
-      xResF = yResF*model3Ratio;
-    if (xResF < (yResF*model3Ratio))
-      yResF = xResF/model3Ratio;
-  }
-
-  // Center the visible area
-  *xOffsetPtr = (*xResPtr - (unsigned) xResF)/2;
-  *yOffsetPtr = (*yResPtr - (unsigned) yResF)/2;
-
-  // If the desired resolution is smaller than what we got, re-center again
-  if (int(*xResPtr) < actualWidth)
-    *xOffsetPtr += (actualWidth - *xResPtr)/2;
-  if (int(*yResPtr) < actualHeight)
-    *yOffsetPtr += (actualHeight - *yResPtr)/2;
-
-  // OpenGL initialization
-  glViewport(0,0,*xResPtr,*yResPtr);
-  glClearColor(0.0,0.0,0.0,0.0);
-  glClearDepth(1.0);
-  glDepthFunc(GL_LESS);
-  glEnable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-
-  // Clear both buffers to ensure a black border
-  for (int i = 0; i < 3; i++)
-  {
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    SDL_GL_SwapWindow(s_window);
-  }
-
-  // Write back resolution parameters
-  *xResPtr = (unsigned) xResF;
-  *yResPtr = (unsigned) yResF;
-
-  UINT32 correction = (UINT32)(((*yResPtr / 384.) * 2.) + 0.5); // due to the 2D layer compensation (2 pixels off)
-
-  glEnable(GL_SCISSOR_TEST);
-
-  // Scissor box (to clip visible area)
-  if (s_runtime_config["WideScreen"].ValueAsDefault<bool>(false))
-  {
-    glScissor(0* aaValue, correction* aaValue, *totalXResPtr * aaValue, (*totalYResPtr - (correction * 2)) * aaValue);
-  }
-  else
-  {
-    glScissor((*xOffsetPtr + correction) * aaValue, (*yOffsetPtr + correction) * aaValue, (*xResPtr - (correction * 2)) * aaValue, (*yResPtr - (correction * 2)) * aaValue);
-  }
-  return Result::OKAY;
-}
-
-// static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
-// {
-//     printf("OGLDebug:: 0x%X: %s\n", id, message);
-// }
-
+static unsigned  xOffset, yOffset;      // offset of renderer output within native viewport
+static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than native viewport)
+static unsigned  totalXRes, totalYRes;  // total resolution (the whole native viewport)
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
 // This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
 // 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists.
@@ -266,115 +183,8 @@ static void SetFullScreenRefreshRate()
     }
 }
 
-/*
- * CreateGLScreen():
- *
- * Creates an OpenGL display surface of the requested size. xOffset and yOffset
- * are used to return a display surface offset (for OpenGL viewport commands)
- * because the actual drawing area may need to be adjusted to preserve the
- * Model 3 aspect ratio. The new resolution will be passed back as well -- both
- * the adjusted viewable area resolution and the total resolution.
- *
- * NOTE: keepAspectRatio should always be true. It has not yet been tested with
- * the wide screen hack.
- */
-static Result CreateGLScreen(bool coreContext, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
-{
-  GLenum err;
-
-  // Call only once per program session (this is because of issues with
-  // DirectInput when the window is destroyed and a new one created). Use
-  // ResizeGLScreen() to change resolutions instead.
-  if (s_window != nullptr)
-  {
-    return ErrorLog("Internal error: CreateGLScreen() called more than once");
-  }
-
-  // Initialize video subsystem
-  if (SDL_Init(SDL_INIT_VIDEO) != 0)
-    return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
-
-  // Important GL attributes
-  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
-  if(s_runtime_config["New3DEngine"].ValueAsDefault<bool>(true))
-  {
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,0);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,0);
-  }
-  else
-  {
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,8);
-  }
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-
-  if (coreContext) {
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  }
-
-  // Set video mode
-  s_window = SDL_CreateWindow(caption.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, *xResPtr, *yResPtr, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | (fullScreen ? SDL_WINDOW_FULLSCREEN : 0));
-  if (nullptr == s_window)
-  {
-    ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
-    return Result::FAIL;
-  }
-
-  if (focusWindow)
-  {
-    SDL_RaiseWindow(s_window);
-  }
-
-  // Create OpenGL context
-  SDL_GLContext context = SDL_GL_CreateContext(s_window);
-  if (nullptr == context)
-  {
-    ErrorLog("Unable to create OpenGL context: %s\n", SDL_GetError());
-    return Result::FAIL;
-  }
-
-  // Set vsync
-  SDL_GL_SetSwapInterval(s_runtime_config["VSync"].ValueAsDefault<bool>(false) ? 1 : 0);
-
-  // Set the context as the current window context
-  SDL_GL_MakeCurrent(s_window, context);
-
-  // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
-  err = glewInit();
-  if (GLEW_OK != err)
-  {
-    ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
-    return Result::FAIL;
-  }
-
-  // print some basic GPU info
-  GLint profile = 0;
-  glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
-
-  printf("GPU info: %s ", glGetString(GL_VERSION));
-
-  if (profile & GL_CONTEXT_CORE_PROFILE_BIT) {
-      printf("(core profile)");
-  }
-
-  if (profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) {
-      printf("(compatibility profile)");
-  }
-
-  printf("\n\n");
-
-  //glDebugMessageCallback(DebugCallback, NULL);
-  //glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE, 0, 0, GL_TRUE);
-  //glEnable(GL_DEBUG_OUTPUT);
-
-  return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
-}
-
-// Vulkan windows have no OpenGL context. Geometry comes from the swapchain extent.
+#ifdef SUPERMODEL_VULKAN
+// Vulkan geometry comes from the swapchain extent.
 static void SetVulkanGeometry(bool keepAspectRatio)
 {
   totalXRes = xRes = s_vkContext->Extent().width;
@@ -390,42 +200,10 @@ static void SetVulkanGeometry(bool keepAspectRatio)
   yOffset = (totalYRes - yRes) / 2;
 }
 
-#ifdef SUPERMODEL_OSX
-static Result LoadBundledVulkanLibrary()
-{
-  const char* overridePath = SDL_getenv("SDL_VULKAN_LIBRARY");
-  if (overridePath && *overridePath)
-    return Result::OKAY;
-  char* basePath = SDL_GetBasePath();
-  if (!basePath)
-    return Result::OKAY;
-  const std::string directory(basePath);
-  SDL_free(basePath);
-  // Packaged executable, source-tree bin/ executable, then a library beside the executable.
-  for (const char* relative : { "Frameworks/libMoltenVK.dylib", "../Frameworks/libMoltenVK.dylib", "libMoltenVK.dylib" })
-  {
-    const std::string path = directory + relative;
-    FILE* library = fopen(path.c_str(), "rb");
-    if (!library)
-      continue;
-    fclose(library);
-    if (SDL_Vulkan_LoadLibrary(path.c_str()) != 0)
-      return ErrorLog("Unable to load bundled MoltenVK '%s': %s", path.c_str(), SDL_GetError());
-    InfoLog("Vulkan: loaded bundled MoltenVK from '%s'.", path.c_str());
-    return Result::OKAY;
-  }
-  return Result::OKAY;
-}
-#endif
-
 static Result CreateVulkanScreen()
 {
   if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
     return ErrorLog("Unable to initialize SDL video: %s", SDL_GetError());
-#ifdef SUPERMODEL_OSX
-  if (LoadBundledVulkanLibrary() != Result::OKAY)
-    return Result::FAIL;
-#endif
   s_window = SDL_CreateWindow("Supermodel", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
     xRes, yRes, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
   if (!s_window)
@@ -433,7 +211,6 @@ static Result CreateVulkanScreen()
   s_vkContext = std::make_unique<Vulkan3D::CVulkanContext>();
   if (s_vkContext->InitDevice(s_window, false, s_runtime_config["VSync"].ValueAs<bool>()) != Result::OKAY)
     return Result::FAIL;
-  aaValue = 1; // The Vulkan path renders directly, without OpenGL SuperAA or CRT filters.
   SetVulkanGeometry(false);
   return Result::OKAY;
 }
@@ -448,332 +225,79 @@ static Result ResizeVulkanScreen(bool keepAspectRatio, bool fullScreen)
   return Result::OKAY;
 }
 
-static void DestroyGLScreen()
+#endif // SUPERMODEL_VULKAN
+
+#ifdef SUPERMODEL_METAL
+static void SetMetalGeometry(bool keepAspectRatio)
+{
+  totalXRes = xRes = s_metalContext->Width();
+  totalYRes = yRes = s_metalContext->Height();
+  if (keepAspectRatio)
+  {
+    if (uint64_t(xRes) * 384 > uint64_t(yRes) * 496)
+      xRes = yRes * 496 / 384;
+    else
+      yRes = xRes * 384 / 496;
+  }
+  xOffset = (totalXRes - xRes) / 2;
+  yOffset = (totalYRes - yRes) / 2;
+}
+
+static Result CreateMetalScreen()
+{
+  if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
+    return ErrorLog("Unable to initialize SDL video: %s", SDL_GetError());
+  s_window = SDL_CreateWindow("Supermodel", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    xRes, yRes, SDL_WINDOW_METAL | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
+  if (!s_window) return ErrorLog("Unable to create Metal window: %s", SDL_GetError());
+  s_metalContext = std::make_unique<Metal3D::CMetalContext>();
+  if (s_metalContext->Init(s_window, s_runtime_config["VSync"].ValueAs<bool>()) != Result::OKAY)
+    return Result::FAIL;
+  SetMetalGeometry(false);
+  return Result::OKAY;
+}
+
+static Result ResizeMetalScreen(bool keepAspectRatio, bool fullScreen)
+{
+  if (SDL_SetWindowFullscreen(s_window, fullScreen ? SDL_WINDOW_FULLSCREEN : 0) < 0)
+    return ErrorLog("Unable to change fullscreen mode: %s", SDL_GetError());
+  if (!s_metalContext->Resize(s_runtime_config["XResolution"].ValueAs<unsigned>(),
+                              s_runtime_config["YResolution"].ValueAs<unsigned>())) return Result::FAIL;
+  SetMetalGeometry(keepAspectRatio);
+  return Result::OKAY;
+}
+#endif
+
+static void DestroyScreen()
 {
   if (s_window != nullptr)
   {
-    if (s_vkContext)
-      s_vkContext.reset();
-    else if (SDL_GL_GetCurrentContext())
-      SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
+#ifdef SUPERMODEL_METAL
+    s_metalContext.reset();
+#endif
+#ifdef SUPERMODEL_VULKAN
+    s_vkContext.reset();
+#endif
     SDL_DestroyWindow(s_window);
     s_window = nullptr;
   }
 }
 
-static Result ResizeGLScreen(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static Result ResizeScreen(bool keepAspectRatio, bool fullScreen)
 {
-  // Set full screen mode
-  if (SDL_SetWindowFullscreen(s_window, fullScreen ? SDL_WINDOW_FULLSCREEN : 0) < 0)
-  {
-    ErrorLog("Unable to enter %s mode: %s\n", fullScreen ? "fullscreen" : "windowed", SDL_GetError());
-    return Result::FAIL;
-  }
-
-  return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
-}
-
-/*
- * PrintGLInfo():
- *
- * Queries and prints OpenGL information. A full list of extensions can
- * optionally be printed.
- */
-static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
-{
-  unsigned xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;
-  if (createScreen)
-  {
-    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
-    {
-      ErrorLog("Unable to query OpenGL.\n");
-      return;
-    }
-  }
-
-  GLint value;
-  if (infoLog)  InfoLog("OpenGL information:");
-  else             puts("OpenGL information:\n");
-  const GLubyte *str = glGetString(GL_VENDOR);
-  if (infoLog)  InfoLog("  Vendor                   : %s", str);
-  else           printf("  Vendor                   : %s\n", str);
-  str = glGetString(GL_RENDERER);
-  if (infoLog)  InfoLog("  Renderer                 : %s", str);
-  else           printf("  Renderer                 : %s\n", str);
-  str = glGetString(GL_VERSION);
-  if (infoLog)  InfoLog("  Version                  : %s", str);
-  else           printf("  Version                  : %s\n", str);
-  str = glGetString(GL_SHADING_LANGUAGE_VERSION);
-  if (infoLog)  InfoLog("  Shading Language Version : %s", str);
-  else           printf("  Shading Language Version : %s\n", str);
-  glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &value);
-  if (infoLog)  InfoLog("  Maximum Vertex Array Size: %d vertices", value);
-  else           printf("  Maximum Vertex Array Size: %d vertices\n", value);
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &value);
-  if (infoLog)  InfoLog("  Maximum Texture Size     : %d texels", value);
-  else           printf("  Maximum Texture Size     : %d texels\n", value);
-  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
-  if (infoLog)  InfoLog("  Maximum Vertex Attributes: %d", value);
-  else           printf("  Maximum Vertex Attributes: %d\n", value);
-  glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &value);
-  if (infoLog)  InfoLog("  Maximum Vertex Uniforms  : %d", value);
-  else           printf("  Maximum Vertex Uniforms  : %d\n", value);
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &value);
-  if (infoLog)  InfoLog("  Maximum Texture Img Units: %d", value);
-  else           printf("  Maximum Texture Img Units: %d\n", value);
-  if (printExtensions)
-  {
-    str = glGetString(GL_EXTENSIONS);
-    char *strLocal = (char *) malloc((strlen((char *) str)+1)*sizeof(char));
-    if (NULL == strLocal)
-    {
-      if (infoLog)  InfoLog("  Supported Extensions     : %s", str);
-      else           printf("  Supported Extensions     : %s\n", str);
-    }
-    else
-    {
-      strcpy(strLocal, (char *) str);
-      if (infoLog)  InfoLog("  Supported Extensions     : %s", (strLocal = strtok(strLocal, " \t\n")));
-      else           printf("  Supported Extensions     : %s\n", (strLocal = strtok(strLocal, " \t\n")));
-      char* strLocalTmp = strLocal;
-      while ((strLocalTmp = strtok(NULL, " \t\n")) != NULL)
-      {
-        if (infoLog)  InfoLog("                             %s", strLocalTmp);
-        else           printf("                             %s\n", strLocalTmp);
-      }
-    }
-    free(strLocal);
-  }
-  if (infoLog)  InfoLog("");
-  else      printf("\n");
-}
-
-#ifdef DEBUG
-static void PrintBAT(unsigned regu, unsigned regl)
-{
-  uint32_t batu = ppc_read_spr(regu);
-  uint32_t batl = ppc_read_spr(regl);
-  uint32_t bepi = batu >> (31 - 14);
-  uint32_t bl = (batu >> (31 - 29)) & 0x7ff;
-  bool vs = batu & 2;
-  bool vp = batu & 1;
-  uint32_t brpn = batl >> (31 - 14);
-  uint32_t wimg = (batl >> (31 - 28)) & 0xf;
-  uint32_t pp = batl & 3;
-  uint32_t size = (bl + 1) * 128 * 1024;
-  uint32_t ea_base = bepi << (31 - 14);
-  uint32_t ea_limit = ea_base + size - 1;
-  uint32_t pa_base = brpn << (31 - 14);
-  uint32_t pa_limit = pa_base + size - 1;
-  printf("%08X-%08X -> %08X-%08X ", ea_base, ea_limit, pa_base, pa_limit);
-  printf("%c%c%c%c ", (wimg&8)?'W':'-', (wimg&4)?'I':'-', (wimg&2)?'M':'-', (wimg&1)?'G':'-');
-  printf("PP=");
-  if (pp == 0)
-    printf("NA");
-  else if (pp == 2)
-    printf("RW");
-  else
-    printf("RO");
-  printf(" Vs=%d Vp=%d", vs, vp);
-}
+#ifdef SUPERMODEL_METAL
+  if (s_metalContext) return ResizeMetalScreen(keepAspectRatio, fullScreen);
 #endif
-
-#ifdef DEBUG
-static void DumpPPCRegisters(IBus *bus)
-{
-  for (int i = 0; i < 32; i += 4)
-  {
-    printf("R%d=%08X\tR%d=%08X\tR%d=%08X\tR%d=%08X\n",
-           i + 0, ppc_get_gpr(i + 0),
-           i + 1, ppc_get_gpr(i + 1),
-           i + 2, ppc_get_gpr(i + 2),
-           i + 3, ppc_get_gpr(i + 3));
-  }
-  printf("PC =%08X\n", ppc_get_pc());
-  printf("LR =%08X\n", ppc_get_lr());
-  printf("DBAT0U=%08X\tIBAT0U=%08X\n", ppc_read_spr(SPR603E_DBAT0U), ppc_read_spr(SPR603E_IBAT0U));
-  printf("DBAT0L=%08X\tIBAT0L=%08X\n", ppc_read_spr(SPR603E_DBAT0L), ppc_read_spr(SPR603E_IBAT0L));
-  printf("DBAT1U=%08X\tIBAT1U=%08X\n", ppc_read_spr(SPR603E_DBAT1U), ppc_read_spr(SPR603E_IBAT1U));
-  printf("DBAT1L=%08X\tIBAT1L=%08X\n", ppc_read_spr(SPR603E_DBAT1L), ppc_read_spr(SPR603E_IBAT1L));
-  printf("DBAT2U=%08X\tIBAT2U=%08X\n", ppc_read_spr(SPR603E_DBAT2U), ppc_read_spr(SPR603E_IBAT2U));
-  printf("DBAT2L=%08X\tIBAT2L=%08X\n", ppc_read_spr(SPR603E_DBAT2L), ppc_read_spr(SPR603E_IBAT2L));
-  printf("DBAT3U=%08X\tIBAT3U=%08X\n", ppc_read_spr(SPR603E_DBAT3U), ppc_read_spr(SPR603E_IBAT3U));
-  printf("DBAT3L=%08X\tIBAT3L=%08X\n", ppc_read_spr(SPR603E_DBAT3L), ppc_read_spr(SPR603E_IBAT3L));
-  for (int i = 0; i < 10; i++)
-    printf("SR%d =%08X VSID=%06X\n", i, ppc_read_sr(i), ppc_read_sr(i) & 0x00ffffff);
-  for (int i = 10; i < 16; i++)
-    printf("SR%d=%08X VSID=%06X\n", i, ppc_read_sr(i), ppc_read_sr(i) & 0x00ffffff);
-  printf("SDR1=%08X\n", ppc_read_spr(SPR603E_SDR1));
-  printf("\n");
-  printf("DBAT0: "); PrintBAT(SPR603E_DBAT0U, SPR603E_DBAT0L); printf("\n");
-  printf("DBAT1: "); PrintBAT(SPR603E_DBAT1U, SPR603E_DBAT1L); printf("\n");
-  printf("DBAT2: "); PrintBAT(SPR603E_DBAT2U, SPR603E_DBAT2L); printf("\n");
-  printf("DBAT3: "); PrintBAT(SPR603E_DBAT3U, SPR603E_DBAT3L); printf("\n");
-  printf("IBAT0: "); PrintBAT(SPR603E_IBAT0U, SPR603E_IBAT0L); printf("\n");
-  printf("IBAT1: "); PrintBAT(SPR603E_IBAT1U, SPR603E_IBAT1L); printf("\n");
-  printf("IBAT2: "); PrintBAT(SPR603E_IBAT2U, SPR603E_IBAT2L); printf("\n");
-  printf("IBAT3: "); PrintBAT(SPR603E_IBAT3U, SPR603E_IBAT3L); printf("\n");
-  printf("\n");
-  /*
-  printf("First PTEG:\n");
-  uint32_t ptab = ppc_read_spr(SPR603E_SDR1) & 0xffff0000;
-  for (int i = 0; i < 65536/8; i++)
-  {
-    uint64_t pte = bus->Read64(ptab + i*8);
-    uint32_t vsid = (pte >> (32 + (31 - 24))) & 0x00ffffff;
-    uint32_t rpn = pte & 0xfffff000;
-    int wimg = (pte >> 3) & 0xf;
-    bool v = pte & 0x8000000000000000ULL;
-    printf("  %d: %016llX V=%d VSID=%06X RPN=%08X WIMG=%c%c%c%c\n", i, pte, v, vsid, rpn, (wimg&8)?'W':'-', (wimg&4)?'I':'-', (wimg&2)?'M':'-', (wimg&1)?'G':'-');
-  }
-  */
-}
+#ifdef SUPERMODEL_VULKAN
+  if (s_vkContext) return ResizeVulkanScreen(keepAspectRatio, fullScreen);
 #endif
-
-static void SaveFrameBuffer(const std::string& file)
-{
-    std::shared_ptr<uint8_t> pixels(new uint8_t[totalXRes * totalYRes * 4], std::default_delete<uint8_t[]>());
-    glReadPixels(0, 0, totalXRes, totalYRes, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
-    Util::WriteSurfaceToBMP<Util::RGBA8>(file, pixels.get(), totalXRes, totalYRes, true);
+  return Result::FAIL;
 }
-
-void Screenshot()
-{
-    if (s_vkContext)
-      return;
-    // Make a screenshot
-    time_t now = std::time(nullptr);
-    tm* ltm = std::localtime(&now);
-    std::string file = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Screenshots)
-        << "Screenshot_"
-        << std::setfill('0') << std::setw(4) << (1900 + ltm->tm_year)
-        << '-'
-        << std::setw(2) << (1 + ltm->tm_mon)
-        << '-'
-        << std::setw(2) << ltm->tm_mday
-        << "_("
-        << std::setw(2) << ltm->tm_hour
-        << '-'
-        << std::setw(2) << ltm->tm_min
-        << '-'
-        << std::setw(2) << ltm->tm_sec
-        << ").bmp";
-
-    std::cout << "Screenshot created: " << file << std::endl;
-    SaveFrameBuffer(file);
-}
-
-/******************************************************************************
- Render State Analysis
-******************************************************************************/
 
 #ifdef DEBUG
-
 #include "Model3/Model3GraphicsState.h"
-#include "OSD/SDL/PolyAnalysis.h"
-#include <fstream>
-
 static std::string s_gfxStatePath;
-static const std::string k_gfxAnalysisPath = "GraphicsAnalysis/";
-
-static std::string GetFileBaseName(const std::string &file)
-{
-  std::string base = file;
-  size_t pos = file.find_last_of('/');
-  if (pos != std::string::npos)
-    base = file.substr(pos + 1);
-  pos = file.find_last_of('\\');
-  if (pos != std::string::npos)
-    base = file.substr(pos + 1);
-  return base;
-}
-
-static void TestPolygonHeaderBits(IEmulator *Emu)
-{
-  const static std::vector<uint32_t> unknownPolyBits
-  {
-    0xffffffff,
-    0x000000ab, // actual color
-    0x000000fc,
-    0x000000c0,
-    0x000000a0,
-    0xffffff60,
-    0xff0300ff  // contour, luminous, etc.
-  };
-
-  const std::vector<uint32_t> unknownCullingNodeBits
-  {
-    0xffffffff,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000,
-    0x00000000
-  };
-
-  GLint readBuffer;
-  glGetIntegerv(GL_READ_BUFFER, &readBuffer);
-  glReadBuffer(GL_FRONT);
-
-  // Render separate image for each unknown bit
-  s_runtime_config.Set("Debug/ForceFlushModels", true);
-  for (int idx = 0; idx < 7; idx++)
-  {
-    for (int bit = 0; bit < 32; bit++)
-    {
-      uint32_t mask = 1 << bit;
-      s_runtime_config.Set("Debug/HighlightPolyHeaderIdx", idx);
-      s_runtime_config.Set("Debug/HighlightPolyHeaderMask", mask);
-      if ((unknownPolyBits[idx] & mask))
-      {
-        Emu->RenderFrame();
-        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
-        SaveFrameBuffer(file);
-      }
-    }
-  }
-
-  for (int idx = 0; idx < 10; idx++)
-  {
-    for (int bit = 0; bit < 32; bit++)
-    {
-      uint32_t mask = 1 << bit;
-      s_runtime_config.Set("Debug/HighlightCullingNodeIdx", idx);
-      s_runtime_config.Set("Debug/HighlightCullingNodeMask", mask);
-      if ((unknownCullingNodeBits[idx] & mask))
-      {
-        Emu->RenderFrame();
-        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
-        SaveFrameBuffer(file);
-      }
-    }
-  }
-
-  glReadBuffer(readBuffer);
-
-  // Generate the HTML GUI
-  std::string file = Util::Format() << k_gfxAnalysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
-  std::ofstream fs(file);
-  if (!fs.good())
-    ErrorLog("Unable to open '%s' for writing.", file.c_str());
-  else
-  {
-    std::string contents = s_polyAnalysisHTMLPrologue;
-    contents += "    var g_file_base_name = '" + GetFileBaseName(s_gfxStatePath) + "';\n";
-    contents += "    var g_unknown_poly_bits = [" + std::string(Util::Format(",").Join(unknownPolyBits)) + "];\n";
-    contents += "    var g_unknown_culling_bits = [" + std::string(Util::Format(",").Join(unknownCullingNodeBits)) + "];\n";
-    contents += s_polyAnalysisHTMLEpilogue;
-    fs << contents;
-    printf("Produced: %s\n", file.c_str());
-  }
-}
-
 #endif
-
 
 /******************************************************************************
  Save States and NVRAM
@@ -924,49 +448,34 @@ static void LoadNVRAM(IEmulator *Emu)
 }
 
 
-/*
-static void PrintGLError(GLenum error)
-{
-  switch (error)
-  {
-  case GL_INVALID_ENUM:       printf("invalid enum\n"); break;
-  case GL_INVALID_VALUE:      printf("invalid value\n"); break;
-  case GL_INVALID_OPERATION:  printf("invalid operation\n"); break;
-  case GL_STACK_OVERFLOW:     printf("stack overflow\n"); break;
-  case GL_STACK_UNDERFLOW:    printf("stack underflow\n"); break;
-  case GL_OUT_OF_MEMORY:      printf("out of memory\n"); break;
-  case GL_TABLE_TOO_LARGE:    printf("table too large\n"); break;
-  case GL_NO_ERROR:           break;
-  default:                    printf("unknown error\n"); break;
-  }
-}
-*/
-
-/******************************************************************************
- Video Callbacks
-******************************************************************************/
-
-static CInputs *videoInputs = NULL;
-static uint32_t currentInputs = 0;
-
 bool BeginFrameVideo()
 {
-  return s_vkContext ? s_vkContext->BeginFrame() : true;
+#ifdef SUPERMODEL_METAL
+  if (s_metalContext) return s_metalContext->BeginFrame();
+#endif
+#ifdef SUPERMODEL_VULKAN
+  if (s_vkContext) return s_vkContext->BeginFrame();
+#endif
+  return true;
 }
 
 void EndFrameVideo()
 {
+#ifdef SUPERMODEL_METAL
+  if (s_metalContext)
+  {
+    s_metalContext->EndFrame();
+    return;
+  }
+#endif
+#ifdef SUPERMODEL_VULKAN
   if (s_vkContext)
   {
     s_vkContext->EndFrame();
     return;
   }
-  // Show crosshairs for light gun games
-  if (videoInputs)
-    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
+#endif
 
-  // Swap the buffers
-  SDL_GL_SwapWindow(s_window);
 }
 
 
@@ -1023,13 +532,17 @@ static void SuperSleepUntil(const uint64_t target)
 ******************************************************************************/
 
 // Creates the 2D layer renderer that the emulator needs
-static IRender2D *CreateRender2D(IEmulator *Emu)
+static IRender2D *CreateRender2D()
 {
-  if (dynamic_cast<CPro1000 *>(Emu))
-    return new CPro1000Render2D();
+#ifdef SUPERMODEL_VULKAN
   if (s_vkContext)
     return new Vulkan3D::CVulkan2D(s_runtime_config, *s_vkContext);
-  return new CRender2D(s_runtime_config);
+#endif
+#ifdef SUPERMODEL_METAL
+  if (s_metalContext)
+    return new Metal3D::CMetal2D(s_runtime_config, *s_metalContext);
+#endif
+  return nullptr;
 }
 
 #ifdef SUPERMODEL_DEBUGGER
@@ -1043,7 +556,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   std::string initialState = s_runtime_config["InitStateFile"].ValueAs<std::string>();
   uint64_t    prevFPSTicks;
   unsigned    fpsFramesElapsed;
-  bool        gameHasLightguns = false;
   bool        quit = false;
   bool        paused = false;
   bool        dumpTimings = false;
@@ -1081,28 +593,16 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-  if (Result::OKAY != (s_vkContext ? ResizeVulkanScreen(!stretch, fullscreen)
-      : ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen)))
+  if (Result::OKAY != ResizeScreen(!stretch, fullscreen))
     return 1;
 
-  // Info log GL information
-  if (!s_vkContext)
-    PrintGLInfo(false, true, false);
 
   // Initialize audio system
   SetAudioType(game.audio);
   if (Result::OKAY != OpenAudio(s_runtime_config))
     return 1;
 
-  // Hide mouse if fullscreen, enable crosshairs for gun games
   Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
-  gameHasLightguns = !!(game.inputs & (Game::INPUT_GUN1|Game::INPUT_GUN2));
-  gameHasLightguns |= game.name == "lostwsga";
-  currentInputs = game.inputs;
-  if (gameHasLightguns)
-    videoInputs = Inputs;
-  else
-    videoInputs = nullptr;
 
   // Frame timing
   s_perfCounterFrequency = SDL_GetPerformanceFrequency();
@@ -1110,33 +610,33 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   uint64_t nextTime = 0;
 
   // Initialize the renderers
-  SuperAA* superAA = s_vkContext ? nullptr : new SuperAA(aaValue, CRTcolors);
-  if (superAA)
-    superAA->Init(totalXRes, totalYRes);
-  IRender2D *Render2D = CreateRender2D(Emu);
+  IRender2D *Render2D = CreateRender2D();
   IRender3D *Render3D = nullptr;
+#ifdef SUPERMODEL_METAL
+  if (s_metalContext)
+    Render3D = new Metal3D::CMetal3D(s_runtime_config, *s_metalContext);
+  else
+#endif
+#ifdef SUPERMODEL_VULKAN
   if (s_vkContext)
     Render3D = new Vulkan3D::CVulkan3D(s_runtime_config, Emu->GetGame().name,
       *s_vkContext, *static_cast<Vulkan3D::CVulkan2D*>(Render2D));
   else
-  {
-#ifndef SUPERMODEL_OSX
-    Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>()
-      ? static_cast<IRender3D*>(new New3D::CNew3D(s_runtime_config, Emu->GetGame().name))
-      : static_cast<IRender3D*>(new Legacy3D::CLegacy3D(s_runtime_config));
-#else
-    Render3D = new New3D::CNew3D(s_runtime_config, Emu->GetGame().name);
 #endif
+  {
+    delete Render2D;
+    ErrorLog("No native graphics backend is available.");
+    return 1;
   }
 
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
 
-  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, (superAA ? superAA->GetTargetID() : 0), upscaleMode))
+  if (Result::OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes, 0, upscaleMode))
     goto QuitError;
-  if (Result::OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, (superAA ? superAA->GetTargetID() : 0)))
+  if (Result::OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes, 0))
     goto QuitError;
 
-  Emu->AttachRenderers(Render2D,Render3D, superAA);
+  Emu->AttachRenderers(Render2D, Render3D);
 
   // Reset emulator
   Emu->Reset();
@@ -1161,13 +661,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   quit = false;
   paused = false;
   dumpTimings = false;
-#ifdef DEBUG
-  if (dynamic_cast<CModel3GraphicsState *>(Emu))
-  {
-    TestPolygonHeaderBits(Emu);
-    quit = true;
-  }
-#endif
   while (!quit)
   {
     // Poll the inputs
@@ -1261,34 +754,21 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
       // Toggle emulator fullscreen
       s_runtime_config.Get("FullScreen").SetValue(!s_runtime_config["FullScreen"].ValueAs<bool>());
 
-      // Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
-      if (!s_vkContext)
-      {
-        delete Render2D;
-        Render2D = nullptr;
-      }
-
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
       totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
       bool stretchc = s_runtime_config["Stretch"].ValueAs<bool>();
       bool fullscreenc = s_runtime_config["FullScreen"].ValueAs<bool>();
-      if (Result::OKAY != (s_vkContext ? ResizeVulkanScreen(!stretchc, fullscreenc)
-          : ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretchc,fullscreenc)))
+      if (Result::OKAY != ResizeScreen(!stretchc, fullscreenc))
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
-      if (superAA)
-        superAA->Init(totalXRes, totalYRes);
-      if (!s_vkContext)
-        Render2D = CreateRender2D(Emu);
-
-      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, (superAA ? superAA->GetTargetID() : 0), upscaleMode))
+      if (Result::OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes, 0, upscaleMode))
         goto QuitError;
-      if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, (superAA ? superAA->GetTargetID() : 0)))
+      if (Result::OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes, 0))
         goto QuitError;
 
-      Emu->AttachRenderers(Render2D, Render3D, superAA);
+      Emu->AttachRenderers(Render2D, Render3D);
 
       Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
     }
@@ -1404,18 +884,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
       dumpTimings = !dumpTimings;
     }
 #endif
-    else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
-    {
-      int crosshairs = (s_runtime_config["Crosshairs"].ValueAs<unsigned>() + 1) & 3;
-      s_runtime_config.Get("Crosshairs").SetValue(crosshairs);
-      switch (crosshairs)
-      {
-      case 0: puts("Crosshairs disabled.");             break;
-      case 3: puts("Crosshairs enabled.");              break;
-      case 1: puts("Showing Player 1 crosshair only."); break;
-      case 2: puts("Showing Player 2 crosshair only."); break;
-      }
-    }
     else if (Inputs->uiClearNVRAM->Pressed())
     {
       // Clear NVRAM
@@ -1427,11 +895,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
       // Toggle frame limiting
       s_runtime_config.Get("Throttle").SetValue(!s_runtime_config["Throttle"].ValueAs<bool>());
       printf("Frame limiting: %s\n", s_runtime_config["Throttle"].ValueAs<bool>() ? "On" : "Off");
-    }
-    else if (Inputs->uiScreenshot->Pressed())
-    {
-      // Make a screenshot
-      Screenshot();
     }
 #ifdef SUPERMODEL_DEBUGGER
       else if (Debugger != NULL && Inputs->uiEnterDebugger->Pressed())
@@ -1469,8 +932,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
     {
       if (CModel3 *M = dynamic_cast<CModel3 *>(Emu))
         M->DumpTimings();
-      else if (CPro1000 *P = dynamic_cast<CPro1000 *>(Emu))
-        P->DumpTimings();
     }
   }
 
@@ -1495,7 +956,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   // Shut down renderers
   delete Render3D;
   delete Render2D;
-  delete superAA;
 
   return 0;
 
@@ -1503,7 +963,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
 QuitError:
   delete Render3D;
   delete Render2D;
-  delete superAA;
 
   return 1;
 }
@@ -1637,11 +1096,6 @@ Util::Config::Node DefaultConfig()
   config.Set("GPUMultiThreaded", true, "Core");
   config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
-#ifndef SUPERMODEL_OSX
-  config.Set("MultiTexture", false, "Legacy3D");
-  config.Set<std::string>("VertexShader", "", "Legacy3D", "", "");
-  config.Set<std::string>("FragmentShader", "", "Legacy3D", "", "");
-#endif
 
   // CSoundBoard
   config.Set("EmulateSound", true, "Sound");
@@ -1659,18 +1113,12 @@ Util::Config::Node DefaultConfig()
   config.Set("ForceFeedback", false, "ForceFeedback");
 
   // Platform-specific/UI
-  config.Set("New3DEngine", true, "Video");
-  config.Set("Vulkan3DEngine", false, "Video");
-  config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
   config.SetEmpty("WindowXPosition");
   config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false, "Video");
   config.Set("BorderlessWindow", false, "Video");
-  config.Set("Supersampling", 1, "Video", 1, 8);
-  config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });
-  SetLabels("CRTcolors", { "None", "ARI/D93 (JP games)", "PVM_20M2U/D93", "BT601_525/D93", "BT601_525/D65 (US games)", "BT601_625/D65 (EUR/AUS games)" });
   config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });
   SetLabels("UpscaleMode", { "None (sharp pixels)", "Biquintic", "Bilinear", "Bicubic" });
   config.Set("WideScreen", false, "Video");
@@ -1681,10 +1129,6 @@ Util::Config::Node DefaultConfig()
   config.Set("RefreshRate", 60.0f, "Video", 0.0f, 0.0f, { 57.524f, 60.f });
   SetLabels("RefreshRate", { "57.524 Hz (original hardware)", "60 Hz" });
   config.Set("ShowFrameRate", false, "Video");
-  config.Set("Crosshairs", int(0), "Video", 0, 0, { 0,1,2,3 });
-  SetLabels("Crosshairs", { "None", "Player 1 only", "Player 2 only", "Players 1 & 2" });
-  config.Set<std::string>("CrosshairStyle", "vector", "Video", "", "", { "bmp","vector" });
-  SetLabels("CrosshairStyle", { "Bitmap", "Vector" });
   config.Set("NoWhiteFlash", false, "Video");
   config.Set("FlipStereo", false, "Sound");
 #ifdef SUPERMODEL_WIN32
@@ -1717,8 +1161,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  // Network. PortIn is the port of the network server (net board and Pro-1000
-  // SCSI TCP bridge). PortOut and AddressOut give the next net board machine.
+  // PortIn is the net board server port. PortOut and AddressOut name the next machine.
   config.Set("Network", false, "Network");
   config.Set("SimulateNet", true, "Network");
   config.Set("PortIn", unsigned(NetProtocol::DEFAULT_PORT), "Network");
@@ -1992,7 +1435,6 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
-  puts("  -ss=<n>                 Supersampling (range 1-8)");
   puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
@@ -2002,33 +1444,12 @@ static void Help(void)
   puts("                          background layer to screen width");
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
   puts("  -upscalemode=<n>        2D layer upscaling filter mode (range 0-3)");
-  puts("  -crtcolors=<n>          CRT color emulation (range 0-5)");
   puts("  -no-throttle            Disable frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
   puts("  -no-vsync               Do not lock to vertical refresh rate");
   puts("  -true-hz                Use true Model 3 refresh rate of 57.524 Hz");
   puts("  -show-fps               Display frame rate in window title bar");
-  puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
-  puts("                          0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
-  puts("  -crosshair-style=<s>    Crosshair style: vector or bmp. [Default: vector]");
-#ifndef SUPERMODEL_OSX
-  puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
-#endif
-  puts("  -quad-rendering         Enable proper quad rendering [Default]");
-  puts("  -no-quad-rendering      Render quads as triangles");
-#ifndef SUPERMODEL_OSX
-  puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
-  puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
-  puts("  -no-multi-texture       Decode to single texture (legacy engine) [Default]");
-#endif
   puts("  -no-white-flash         Disables white flash when games disable 3D rendering");
-#ifndef SUPERMODEL_OSX
-  puts("  -vert-shader=<file>     Load Real3D vertex shader for 3D rendering (legacy");
-  puts("                          engine)");
-  puts("  -frag-shader=<file>     Load Real3D fragment shader for 3D rendering (legacy");
-  puts("                          engine)");
-#endif
-  puts("  -print-gl-info          Print OpenGL driver information and quit");
   puts("");
   puts("Audio Options:");
   puts("  -sound-volume=<vol>     Volume of SCSP-generated sound in %, applies only");
@@ -2045,7 +1466,7 @@ static void Help(void)
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
-  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and Pro-1000)\n"
+  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board)\n"
          "                          [Default: %u]\n", defaultConfig["PortIn"].ValueAs<unsigned>());
   printf("  -port-out=<n>           TCP port of the next machine [Default: %u]\n", defaultConfig["PortOut"].ValueAs<unsigned>());
   printf("  -address-out=<addr>     Address of the next machine [Default: %s]\n", defaultConfig["AddressOut"].ValueAs<std::string>().c_str());
@@ -2069,9 +1490,7 @@ static void Help(void)
   puts("  -enter-debugger         Enter debugger at start of emulation");
 #endif // SUPERMODEL_DEBUGGER
 #ifdef DEBUG
-  puts("  -gfx-state=<file>       Produce graphics analysis for save state (works only");
-  puts("                          with the legacy 3D engine and requires a");
-  puts("                          GraphicsAnalysis directory to exist)");
+  puts("  -gfx-state=<file>       View graphics from a save state");
 #endif
   puts("");
 }
@@ -2083,7 +1502,6 @@ struct ParsedCommandLine
   bool error = false;
   bool print_help = false;
   bool print_games = false;
-  bool print_gl_info = false;
   bool config_inputs = false;
   bool print_inputs = false;
   bool disable_debugger = false;
@@ -2109,10 +1527,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-game-xml-file",         "GameXMLFile"             },
     { "-load-state",            "InitStateFile"           },
     { "-ppc-frequency",         "PowerPCFrequency"        },
-    { "-crosshairs",            "Crosshairs"              },
-    { "-crosshair-style",       "CrosshairStyle"          },
-    { "-vert-shader",           "VertexShader"            },
-    { "-frag-shader",           "FragmentShader"          },
     { "-sound-volume",          "SoundVolume"             },
     { "-music-volume",          "MusicVolume"             },
     { "-balance",               "Balance"                 },
@@ -2141,22 +1555,12 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-stretch",          { "Stretch",          false } },
     { "-wide-bg",             { "WideBackground",   true } },
     { "-no-wide-bg",          { "WideBackground",   false } },
-#ifndef SUPERMODEL_OSX
-    { "-no-multi-texture",    { "MultiTexture",     false } },
-    { "-multi-texture",       { "MultiTexture",     true } },
-#endif
     { "-throttle",            { "Throttle",         true } },
     { "-no-throttle",         { "Throttle",         false } },
     { "-vsync",               { "VSync",            true } },
     { "-no-vsync",            { "VSync",            false } },
     { "-show-fps",            { "ShowFrameRate",    true } },
     { "-no-fps",              { "ShowFrameRate",    false } },
-    { "-new3d",               { "New3DEngine",      true } },
-    { "-quad-rendering",      { "QuadRendering",    true } },
-    { "-no-quad-rendering",   { "QuadRendering",    false } },
-#ifndef SUPERMODEL_OSX
-    { "-legacy3d",            { "New3DEngine",      false } },
-#endif
     { "-no-flip-stereo",      { "FlipStereo",       false } },
     { "-flip-stereo",         { "FlipStereo",       true } },
     { "-sound",               { "EmulateSound",     true } },
@@ -2268,52 +1672,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
           }
       }
-      else if (arg == "-ss" || arg.find("-ss=") == 0) {
-
-          std::vector<std::string> parts = Util::Format(arg).Split('=');
-
-          if (parts.size() != 2)
-          {
-              ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
-              cmd_line.error = true;
-          }
-          else {
-
-              try {
-                  int val = std::stoi(parts[1]);
-                  val = std::clamp(val, 1, 8);
-
-                  cmd_line.config.Set("Supersampling", val);
-              }
-              catch (...) {
-                  ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
-                  cmd_line.error = true;
-              }
-          }
-      }
-      else if (arg == "-crtcolors" || arg.find("-crtcolors=") == 0) {
-
-          std::vector<std::string> parts = Util::Format(arg).Split('=');
-
-          if (parts.size() != 2)
-          {
-              ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
-              cmd_line.error = true;
-          }
-          else {
-
-              try {
-                  int val = std::stoi(parts[1]);
-                  val = std::clamp(val, 0, 5);
-
-                  cmd_line.config.Set("CRTcolors", val);
-              }
-              catch (...) {
-                  ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
-                  cmd_line.error = true;
-              }
-          }
-      }
       else if (arg == "-upscalemode" || arg.find("-upscalemode=") == 0) {
 
           std::vector<std::string> parts = Util::Format(arg).Split('=');
@@ -2339,8 +1697,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
       }
       else if (arg == "-true-hz")
         cmd_line.config.Set("RefreshRate", 57.524f);
-      else if (arg == "-print-gl-info")
-        cmd_line.print_gl_info = true;
       else if (arg == "-config-inputs")
         cmd_line.config_inputs = true;
       else if (arg == "-print-inputs")
@@ -2410,6 +1766,7 @@ int main(int argc, char **argv)
       // look at this later.
       Util::Config::Node fileConfig("Global");
       Util::Config::FromINIFile(&fileConfig, s_configFilePath);
+    ClearRetiredVideoSettings(fileConfig);
 
       cmd_line.rom_files = RunGUI(s_configFilePath, fileConfig);
 
@@ -2437,16 +1794,6 @@ int main(int argc, char **argv)
     Help();
     return 0;
   }
-  if (cmd_line.print_gl_info)
-  {
-    // Use command line options so we can select the 3D engine for which to print GL info
-    Util::Config::MergeINISections(&s_runtime_config, DefaultConfig(), cmd_line.config);
-
-    // We must exit after this because CreateGLScreen() is used
-    PrintGLInfo(true, false, false);
-    return 0;
-  }
-
 #ifdef DEBUG
   s_gfxStatePath.assign(cmd_line.gfx_state);
 #endif
@@ -2468,6 +1815,7 @@ int main(int argc, char **argv)
     Util::Config::Node config3("Global");
     Util::Config::Node config4("Global");
     Util::Config::FromINIFile(&fileConfig, s_configFilePath);
+    ClearRetiredVideoSettings(fileConfig);
     Util::Config::MergeINISections(&fileConfigWithDefaults, DefaultConfig(), fileConfig); // apply .ini file's global section over defaults
     Util::Config::MergeINISections(&config3, fileConfigWithDefaults, cmd_line.config);    // apply command line overrides
     if (rom_specified || print_games)
@@ -2488,6 +1836,8 @@ int main(int argc, char **argv)
     Util::Config::MergeINISections(&s_runtime_config, config4, cmd_line.config);  // apply command line overrides once more
   }
   LogConfig(s_runtime_config);
+  if (rom_specified && game.platform != Game::PLATFORM_MODEL3)
+    { ErrorLog("Pro-1000 support has been removed; this build runs Model 3 games only."); return 1; }
 
   // Initialize SDL (individual subsystems get initialized later)
   if (SDL_Init(0) != 0)
@@ -2512,37 +1862,26 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_DEBUGGER
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
 
-  aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
-  CRTcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
   // Create a window
   xRes = 496;
   yRes = 384;
-  // Pro-1000 and input-only sessions retain the existing OpenGL path.
-  if (s_runtime_config["Vulkan3DEngine"].ValueAs<bool>() && rom_specified && game.platform == Game::PLATFORM_MODEL3)
+  if (!rom_specified)
   {
-    if (CreateVulkanScreen() != Result::OKAY)
-    {
-      exitCode = 1;
-      goto Exit;
-    }
+    SDL_InitSubSystem(SDL_INIT_VIDEO);
+    s_window = SDL_CreateWindow("Supermodel Input Setup", SDL_WINDOWPOS_CENTERED,
+      SDL_WINDOWPOS_CENTERED, xRes, yRes, SDL_WINDOW_SHOWN);
+    if (!s_window) { exitCode = 1; goto Exit; }
   }
-  else if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  else
   {
-    exitCode = 1;
-    goto Exit;
-  }
-
-  // The existing bitmap crosshair uses OpenGL.
-  if (!s_vkContext)
-  {
-    s_crosshair = new CCrosshair(s_runtime_config);
-    if (s_crosshair->Init() != Result::OKAY)
-    {
-      ErrorLog("Unable to load bitmap crosshair texture\n");
-      exitCode = 1;
-      goto Exit;
-    }
+#ifdef SUPERMODEL_METAL
+    if (CreateMetalScreen() != Result::OKAY) { exitCode = 1; goto Exit; }
+#elif defined(SUPERMODEL_VULKAN)
+    if (CreateVulkanScreen() != Result::OKAY) { exitCode = 1; goto Exit; }
+#else
+#error A native graphics backend is required
+#endif
   }
 
   // Create input system
@@ -2626,18 +1965,16 @@ int main(int argc, char **argv)
     goto Exit;
   }
 
-  // Network server: for the net board, and for the programs that connect to
-  // the Pro-1000. If it cannot listen, emulation continues.
-  if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
+  // Start the net board server when networking is enabled.
+  if (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>())
   {
     netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
     netServer->Start();
   }
 
-  // Console input is created only when something reads it: the emulated
-  // machine's serial console (Pro-1000) and/or the debugger
+  // Only the debugger consumes console input.
   {
-    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
+    bool needConsoleInput = false;
 #ifdef SUPERMODEL_DEBUGGER
     needConsoleInput |= !cmd_line.disable_debugger;
 #endif // SUPERMODEL_DEBUGGER
@@ -2651,9 +1988,6 @@ int main(int argc, char **argv)
     Emu = new CModel3GraphicsState(s_runtime_config, s_gfxStatePath);
   else
 #endif
-  if (game.platform == Game::PLATFORM_PRO1000)
-    Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
-  else
     Emu = new CModel3(s_runtime_config, Inputs, Outputs, netServer);
 
 #ifdef SUPERMODEL_DEBUGGER
@@ -2679,8 +2013,7 @@ Exit:
   netServer.reset();
   delete Inputs;
   delete Outputs;
-  delete s_crosshair;
-  DestroyGLScreen();
+  DestroyScreen();
   SDL_Quit();
 
   if (exitCode)

@@ -33,7 +33,6 @@ struct Game;
 struct ROMSet;
 class IRender2D;
 class IRender3D;
-class SuperAA;
 
 /*
  * IEmulator:
@@ -139,18 +138,17 @@ public:
    *
    * Attaches the renderers to the appropriate device objects. Call it after
    * Init(). Call it again when the renderers are replaced (for example, when
-   * the OpenGL context is created again).
+   * the display is recreated).
    *
    * Other dependencies (inputs, outputs, console input, network server) go to
    * the constructor of each emulator.
    *
    * Parameters:
    *    Render2DPtr   Pointer to a 2D layer renderer object (the type that
-   *                  the emulator needs: CRender2D for Model 3,
-   *                  CPro1000Render2D for the Pro-1000).
+   *                  the emulator needs).
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
-  virtual void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
+  virtual void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr) = 0;
 
   /*
    * Init(game, rom_set):
