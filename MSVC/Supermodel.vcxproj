@@ -259,6 +259,10 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\BlockFile.cpp" />
     <ClCompile Include="..\Src\CPU\68K\68K.cpp" />
     <ClCompile Include="..\Src\CPU\68K\Musashi\m68kcpu.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopac.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopdm.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopnz.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kops.c" />
     <ClCompile Include="..\Src\CPU\68K\Musashi\m68kdasm.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

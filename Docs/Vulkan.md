@@ -66,6 +66,11 @@ crosses the 600-frame reporting interval with diagnostics disabled, resizes the
 swapchain and recreates the context. It does not verify game geometry, visual
 accuracy, or reproduce gameplay frame-time spikes.
 
+For the launcher scaling regression test on Windows, build x64 Release, run
+`Scripts/Build_Test_LauncherScale.cmd`, then run
+`MSVC/x64/Release/Test_LauncherScale.exe`. This checks geometry coverage and
+clipping at 1x, 1.5x and 2x without a game ROM.
+
 ## Source and attribution
 
 The Vulkan renderer, shaders and volk loader were imported from
